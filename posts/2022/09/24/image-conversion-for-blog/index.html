@@ -1,0 +1,237 @@
+<!doctype html><html class=no-js lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><title>写真をブログに乗せるための変換コマンド - シダ観察記録</title><script>(function(a,b){a[b]=a[b].replace("no-js","js")})(document.documentElement,"className")</script><meta name=description content><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=dns-prefetch href=//fonts.googleapis.com><link rel=dns-prefetch href=//fonts.gstatic.com><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700"><link rel=stylesheet href=/css/style.css><link rel="shortcut icon" href=/favicon.ico></head><body class=body><div class="container container--outer"><header class=header><div class="container header__container"><div class=logo><a class=logo__link href=/ title=シダ観察記録 rel=home><div class="logo__item logo__text"><div class=logo__title>シダ観察記録</div><div class=logo__tagline>個人的な備忘録など</div></div></a></div><nav class=menu><button class=menu__btn aria-haspopup=true aria-expanded=false tabindex=0>
+<span class=menu__btn-title tabindex=-1>Menu</span></button><ul class=menu__list><li class=menu__item><a class=menu__link href=/posts/><span class=menu__text>archive</span></a></li><li class=menu__item><a class=menu__link href=/about/><span class=menu__text>about</span></a></li></ul></nav></div></header><div class="wrapper flex"><div class=primary><main class=main role=main><article class=post><header class=post__header><h1 class=post__title>写真をブログに乗せるための変換コマンド</h1><div class="post__meta meta"><div class="meta__item-datetime meta__item"><svg class="meta__icon icon icon-time" width="16" height="14" viewBox="0 0 30 28"><path d="M15 0C7 0 1 6 1 14s6 14 14 14 14-6 14-14S23 0 15 0zm0 25C9 25 4 20 4 14S9 3 15 3s11 5 11 11-5 11-11 11zm1-18h-2v8.4l6.8 4.4L22 18l-6-3.8V7z"/></svg><time class=meta__text datetime=2022-09-24T11:01:35+09:00>2022-09-24</time>
+<time class=meta__text datetime=2022-09-24T23:47:43+09:00>(Last Modified: 2022-09-24)</time></div></div></header><div class="post__toc toc"><div class=toc__title>Page content</div><div class=toc__menu><nav id=TableOfContents><ul><li><a href=#まとめ>まとめ</a></li><li><a href=#必要なパッケージ>必要なパッケージ</a></li><li><a href=#コマンドについての捕捉>コマンドについての捕捉</a><ul><li><a href=#画像のファイル形式について>画像のファイル形式について</a></li><li><a href=#exif-情報の削除について>EXIF 情報の削除について</a></li><li><a href=#画像解像度について>画像解像度について</a></li></ul></li><li><a href=#あとがき>あとがき</a></li></ul></nav></div></div><div class="content post__content clearfix"><p>スマートフォンで撮った写真をブログに乗せるときに使うコマンドのメモと、それに関連して調べたこと。</p><h2 id=まとめ>まとめ</h2><p>ImageMagick の convert コマンド一発でファイル形式の変換、リサイズ、EXIF情報の削除までできる。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>convert -strip -resize 680x680 input.heic output.webp
+</code></pre></div><h2 id=必要なパッケージ>必要なパッケージ</h2><p>自分が記事を書くのに使っている ArchLinux の場合 convert コマンドは以下の通り <code>imagemagick</code> パッケージに含まれているので適宜インストールする。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>~/Downloads 
+❯ which convert
+/usr/bin/convert
+
+~/Downloads 
+❯ yay -Fy
+:: Synchronizing package databases...
+ core is up to date
+ extra is up to date
+ community is up to date
+
+~/Downloads 
+❯ yay -Fx <span style=color:#e6db74>&#39;/usr/bin/convert$&#39;</span>
+usr/bin/convert is owned by extra/imagemagick 7.1.0.48-2
+
+~/Downloads took 5s 
+❯ 
+</code></pre></div><h2 id=コマンドについての捕捉>コマンドについての捕捉</h2><p>冒頭のまとめの通りではあるが、実際に変換に使うコマンドとしては以下のような感じにした。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>convert -strip -resize 680x680 input.heic output.webp
+</code></pre></div><p>オプション、引数については以下</p><table><thead><tr><th>オプション/引数</th><th>説明</th></tr></thead><tbody><tr><td>-strip</td><td>EXIF 情報の削除</td></tr><tr><td>-resize 680x680</td><td>変換後の画像の解像度、この場合は縦横比を維持しつつ 680x680 に収まるサイズに変換する</td></tr><tr><td>input.heic</td><td>入力ファイル名</td></tr><tr><td>output.webp</td><td>出力ファイル名、ファイル名の拡張子を読んでそのファイル形式に変換してくれる</td></tr></tbody></table><p>それぞれのパラメータについてもう少し補足していく。</p><h3 id=画像のファイル形式について>画像のファイル形式について</h3><p>まず自分は写真を撮るとき iPhone (13 mini) を使っているが、カメラアプリの設定を弄っていなければ
+<a href=https://ja.wikipedia.org/wiki/High_Efficiency_Image_File_Format>HEIF(High Efficiency Image File Format)</a>
+という形式になる。</p><p>HEIF 形式と言いつつ拡張子は .heic だが、そこはあまり気にしなくて良さそう</p><blockquote><p>参考) <a href="https://www.adobe.com/jp/creativecloud/file-types/image/raster/heif-file.html#:~:text=HEIF%E3%81%AF%E6%A8%99%E6%BA%96%E8%A6%8F%E6%A0%BC%EF%BC%88High,%E3%81%AF%E7%BD%AE%E3%81%8D%E6%9B%BF%E3%81%88%E5%8F%AF%E8%83%BD%E3%81%A7%E3%81%99%E3%80%82">HEIFファイルについて | Adobe</a></p><p>HEICとHEIFの違いは何ですか？</p><p>HEIFは標準規格（High Efficiency Image Format）の名称であり、HEICはAppleが定めた拡張子の名称です。どちらもHEVC（High Efficiency Video Compression、別名H.265）規格がベースで、基本的に両者は置き替え可能です。</p></blockquote><p>で、HEIF 形式はWebブラウザでの対応状況があんまり良くないので、
+ブログに載せるならWebブラウザで表示できる別のファイル形式に変換する必要がある。</p><p>具体的に何の形式にするのが良いかについてだが、
+軽く調べた感じ写真のように色数の多い画像は基本的に JPEG 使うのが良いらしい、
+ということだったので最初は JPEG を使うことを考えていた。</p><p>ただ、この記事を書きながら調べてる途中で <a href=https://ja.wikipedia.org/wiki/WebP>WebP</a> 形式が良さそうという事で WebP を使う方針にした。</p><ul><li>単純に JPEG/PNG よりも同じくらいの画質での圧縮率が高そう</li><li>自分が今使っている ImageMagick のバージョンで標準対応してるので、特に追加の手間も無い</li><li>ブラウザの対応状況としても最近のモノなら概ね対応してそう<ul><li>参考) <a href=https://caniuse.com/webp>WebP image format | Can I use&mldr; Support tables for HTML5, CSS3, etc</a></li></ul></li></ul><p>注意点としてはWebブラウザ以外での対応状況がまだぼちぼちな感じ様で、 Windows の標準ビューアで扱うにはコーデックスをインストールしたり一手間要るっぽい。
+（自分が使っている Ristretto というビューアも標準では対応してなかった）</p><p>（今の所予定は無いが）絵を書いてアップしたり、コラ画像作ったり、ダウンロードして使われるのがある程度想定される画像に関しては、
+JPEG/PNG なり別の形式を使う方が無難なのかもしれない。</p><h3 id=exif-情報の削除について>EXIF 情報の削除について</h3><p>スマートフォンにしろカメラにしろ写真を撮ると EXIF 情報として位置情報含め色々付加されるが、住所等何かしらバレても困るので消す。</p><p>位置情報に関して言えばスマートフォン側の設定で付与しないようにもできるが、
+何となくオリジナルのファイルでは持たせて置きたかったので、そこの設定は弄らずブログ用に変換するタイミングで消す事にした。</p><p>あと、当然ではあるが EXIF 情報の削除については単純に情報量が減るのでファイルサイズが小さくなるメリットもある。
+正直画像本体のデータ量に比べたら EXIF 情報のデータ量なんて微々たるものだろうと思っていたが、
+一応リサイズ後のファイルで確認してみると思ってたよりは大きかった。
+（3KiB ではあるが画像部分のサイズが思ったよりも小さくなったので、割合としては意外と大きかった）</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>~/Downloads 
+❯ convert -strip -resize 680x680 original.heic strip.webp
+
+~/Downloads 
+❯ convert -resize 680x680 original.heic unstrip.webp
+
+~/Downloads 
+❯ ls -lk *strip.webp
+-rw-r--r-- <span style=color:#ae81ff>1</span> shida shida <span style=color:#ae81ff>54856</span> Sep <span style=color:#ae81ff>24</span> 22:33 strip.webp
+-rw-r--r-- <span style=color:#ae81ff>1</span> shida shida <span style=color:#ae81ff>58056</span> Sep <span style=color:#ae81ff>24</span> 22:33 unstrip.webp
+
+~/Downloads 
+❯ 
+</code></pre></div><h4 id=写真に付与される-exif-情報について>写真に付与される EXIF 情報について</h4><p>記事の本旨からは少しずれるが、 iPhone で撮った写真の EXIF 情報を眺めてみる。
+参考写真としては 2022/09/23 に池袋で撮ったこんな感じのモノ。（画像は圧縮済）</p><p><img src=image1.webp alt=EXIF確認用の画像></p><details><summary>変換前ファイルの EXIF 確認 (長いので折りたたみ)</summary><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>~/Downloads 
+❯ exiftool IMG_1207.heic 
+ExifTool Version Number         : 12.42
+File Name                       : IMG_1207.heic
+Directory                       : .
+File Size                       : <span style=color:#ae81ff>1968</span> kB
+File Modification Date/Time     : 2022:09:23 19:03:58+09:00
+File Access Date/Time           : 2022:09:24 20:41:01+09:00
+File Inode Change Date/Time     : 2022:09:24 20:41:01+09:00
+File Permissions                : -rwxrwxrwx
+File Type                       : HEIC
+File Type Extension             : heic
+MIME Type                       : image/heic
+Major Brand                     : High Efficiency Image Format HEVC still image <span style=color:#f92672>(</span>.HEIC<span style=color:#f92672>)</span>
+Minor Version                   : 0.0.0
+Compatible Brands               : mif1, MiHE, MiPr, miaf, MiHB, heic
+Handler Type                    : Picture
+Primary Item Reference          : <span style=color:#ae81ff>49</span>
+Meta Image Size                 : 4032x3024
+XMP Toolkit                     : XMP Core 6.0.0
+HDR Gain Map Version            : <span style=color:#ae81ff>65536</span>
+Exif Byte Order                 : Big-endian <span style=color:#f92672>(</span>Motorola, MM<span style=color:#f92672>)</span>
+Make                            : Apple
+Camera Model Name               : iPhone <span style=color:#ae81ff>13</span> mini
+Orientation                     : Horizontal <span style=color:#f92672>(</span>normal<span style=color:#f92672>)</span>
+X Resolution                    : <span style=color:#ae81ff>72</span>
+Y Resolution                    : <span style=color:#ae81ff>72</span>
+Resolution Unit                 : inches
+Software                        : 16.0
+Modify Date                     : 2022:09:23 19:03:59
+Host Computer                   : iPhone <span style=color:#ae81ff>13</span> mini
+Exposure Time                   : 1/33
+F Number                        : 1.6
+Exposure Program                : Program AE
+ISO                             : <span style=color:#ae81ff>500</span>
+Exif Version                    : <span style=color:#ae81ff>0232</span>
+Date/Time Original              : 2022:09:23 19:03:59
+Create Date                     : 2022:09:23 19:03:59
+Offset Time                     : +09:00
+Offset Time Original            : +09:00
+Offset Time Digitized           : +09:00
+Shutter Speed Value             : 1/33
+Aperture Value                  : 1.6
+Brightness Value                : -0.9632028284
+Exposure Compensation           : -0.043
+Metering Mode                   : Multi-segment
+Flash                           : Off, Did not fire
+Focal Length                    : 5.1 mm
+Subject Area                    : <span style=color:#ae81ff>2007</span> <span style=color:#ae81ff>1505</span> <span style=color:#ae81ff>2213</span> <span style=color:#ae81ff>1324</span>
+Run Time Flags                  : Valid
+Run Time Value                  : <span style=color:#ae81ff>55586484792541</span>
+Run Time Scale                  : <span style=color:#ae81ff>1000000000</span>
+Run Time Epoch                  : <span style=color:#ae81ff>0</span>
+Acceleration Vector             : -0.9918134222 -0.001812204602 0.1684726775
+Warning                         : <span style=color:#f92672>[</span>minor<span style=color:#f92672>]</span> Bad format <span style=color:#f92672>(</span>16<span style=color:#f92672>)</span> <span style=color:#66d9ef>for</span> MakerNotes entry <span style=color:#ae81ff>14</span>
+Sub Sec Time Original           : <span style=color:#ae81ff>562</span>
+Sub Sec Time Digitized          : <span style=color:#ae81ff>562</span>
+Color Space                     : Uncalibrated
+Exif Image Width                : <span style=color:#ae81ff>4032</span>
+Exif Image Height               : <span style=color:#ae81ff>3024</span>
+Sensing Method                  : One-chip color area
+Scene Type                      : Directly photographed
+Exposure Mode                   : Auto
+White Balance                   : Auto
+Focal Length In 35mm Format     : <span style=color:#ae81ff>26</span> mm
+Lens Info                       : 1.539999962-5.1mm f/1.6-2.4
+Lens Make                       : Apple
+Lens Model                      : iPhone <span style=color:#ae81ff>13</span> mini back dual wide camera 5.1mm f/1.6
+Composite Image                 : Composite Image Captured While Shooting
+Composite Image Count           : <span style=color:#ae81ff>10</span> <span style=color:#ae81ff>0</span>
+Composite Image Exposure Times  : <span style=color:#ae81ff>0</span> 0.6 <span style=color:#ae81ff>0</span> 1/8 <span style=color:#ae81ff>0</span> 1/33 <span style=color:#ae81ff>0</span> <span style=color:#ae81ff>0</span>
+GPS Latitude Ref                : North
+GPS Longitude Ref               : East
+GPS Altitude Ref                : Above Sea Level
+GPS Speed Ref                   : km/h
+GPS Speed                       : <span style=color:#ae81ff>0</span>
+GPS Img Direction Ref           : True North
+GPS Img Direction               : 248.2390901
+GPS Dest Bearing Ref            : True North
+GPS Dest Bearing                : 248.2390901
+GPS Date Stamp                  : 2022:09:23
+GPS Horizontal Positioning Error: 14.24648401 m
+Profile CMM Type                : Apple Computer Inc.
+Profile Version                 : 4.0.0
+Profile Class                   : Display Device Profile
+Color Space Data                : RGB
+Profile Connection Space        : XYZ
+Profile Date Time               : 2022:01:01 00:00:00
+Profile File Signature          : acsp
+Primary Platform                : Apple Computer Inc.
+CMM Flags                       : Not Embedded, Independent
+Device Manufacturer             : Apple Computer Inc.
+Device Model                    : 
+Device Attributes               : Reflective, Glossy, Positive, Color
+Rendering Intent                : Perceptual
+Connection Space Illuminant     : 0.9642 <span style=color:#ae81ff>1</span> 0.82491
+Profile Creator                 : Apple Computer Inc.
+Profile ID                      : ecfda38e388547c36db4bd4f7ada182f
+Profile Description             : Display P3
+Profile Copyright               : Copyright Apple Inc., <span style=color:#ae81ff>2022</span>
+Media White Point               : 0.96419 <span style=color:#ae81ff>1</span> 0.82489
+Red Matrix Column               : 0.51512 0.2412 -0.00105
+Green Matrix Column             : 0.29198 0.69225 0.04189
+Blue Matrix Column              : 0.1571 0.06657 0.78407
+Red Tone Reproduction Curve     : <span style=color:#f92672>(</span>Binary data <span style=color:#ae81ff>32</span> bytes, use -b option to extract<span style=color:#f92672>)</span>
+Chromatic Adaptation            : 1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168
+Blue Tone Reproduction Curve    : <span style=color:#f92672>(</span>Binary data <span style=color:#ae81ff>32</span> bytes, use -b option to extract<span style=color:#f92672>)</span>
+Green Tone Reproduction Curve   : <span style=color:#f92672>(</span>Binary data <span style=color:#ae81ff>32</span> bytes, use -b option to extract<span style=color:#f92672>)</span>
+HEVC Configuration Version      : <span style=color:#ae81ff>1</span>
+General Profile Space           : Conforming
+General Tier Flag               : Main Tier
+General Profile IDC             : Main Still Picture
+Gen Profile Compatibility Flags : Main Still Picture, Main 10, Main
+Constraint Indicator Flags      : <span style=color:#ae81ff>176</span> <span style=color:#ae81ff>0</span> <span style=color:#ae81ff>0</span> <span style=color:#ae81ff>0</span> <span style=color:#ae81ff>0</span> <span style=color:#ae81ff>0</span>
+General Level IDC               : <span style=color:#ae81ff>90</span> <span style=color:#f92672>(</span>level 3.0<span style=color:#f92672>)</span>
+Min Spatial Segmentation IDC    : <span style=color:#ae81ff>0</span>
+Parallelism Type                : <span style=color:#ae81ff>0</span>
+Chroma Format                   : 4:2:0
+Bit Depth Luma                  : <span style=color:#ae81ff>8</span>
+Bit Depth Chroma                : <span style=color:#ae81ff>8</span>
+Average Frame Rate              : <span style=color:#ae81ff>0</span>
+Constant Frame Rate             : Unknown
+Num Temporal Layers             : <span style=color:#ae81ff>1</span>
+Temporal ID Nested              : No
+Image Width                     : <span style=color:#ae81ff>4032</span>
+Image Height                    : <span style=color:#ae81ff>3024</span>
+Image Spatial Extent            : 4032x3024
+Rotation                        : <span style=color:#ae81ff>0</span>
+Image Pixel Depth               : <span style=color:#ae81ff>8</span>
+Auxiliary Image Type            : urn:com:apple:photo:2020:aux:hdrgainmap
+Media Data Size                 : <span style=color:#ae81ff>1963768</span>
+Media Data Offset               : <span style=color:#ae81ff>4686</span>
+Run Time Since Power Up         : 15:26:26
+Aperture                        : 1.6
+Image Size                      : 4032x3024
+Megapixels                      : 12.2
+Scale Factor To <span style=color:#ae81ff>35</span> mm Equivalent: 5.1
+Shutter Speed                   : 1/33
+Create Date                     : 2022:09:23 19:03:59.562+09:00
+Date/Time Original              : 2022:09:23 19:03:59.562+09:00
+Modify Date                     : 2022:09:23 19:03:59+09:00
+GPS Altitude                    : 35.3 m Above Sea Level
+GPS Latitude                    : <span style=color:#ae81ff>35</span> deg 43<span style=color:#e6db74>&#39; 49.47&#34; N
+</span><span style=color:#e6db74>GPS Longitude                   : 139 deg 42&#39;</span> 33.33<span style=color:#e6db74>&#34; E
+</span><span style=color:#e6db74>Circle Of Confusion             : 0.006 mm
+</span><span style=color:#e6db74>Field Of View                   : 69.4 deg
+</span><span style=color:#e6db74>Focal Length                    : 5.1 mm (35 mm equivalent: 26.0 mm)
+</span><span style=color:#e6db74>GPS Position                    : 35 deg 43&#39; 49.47&#34;</span> N, <span style=color:#ae81ff>139</span> deg 42<span style=color:#960050;background-color:#1e0010>&#39;</span> 33.33<span style=color:#e6db74>&#34; E
+</span><span style=color:#e6db74>Hyperfocal Distance             : 2.76 m
+</span><span style=color:#e6db74>Light Value                     : 4.1
+</span><span style=color:#e6db74>Lens ID                         : iPhone 13 mini back dual wide camera 5.1mm f/1.6
+</span><span style=color:#e6db74>
+</span><span style=color:#e6db74>~/Downloads 
+</span><span style=color:#e6db74>❯ 
+</span></code></pre></div></details><p>一通り眺めてみた感じ位置情報以外は見えて困るものはなさそう。（iPhone の名前はどっかに入ってると思っていたが入ってなさそう）</p><ul><li>GPS Altitude</li><li>GPS Latitude</li><li>GPS Longitude</li><li>GPS Position</li></ul><p>強いて言えば写真に写っているもの次第では撮影日時の情報が気になるかもしれない</p><ul><li>Modify Date</li><li>Date/Time Original</li><li>Create Date</li></ul><p>あとカメラには詳しくないので全部は理解出来てないが、 EXIF 情報として付与されるってスゴイ色々あるんだなというのを認識した。</p><p>一応ブログに載せる様に変換（ <code>convert -strip 〜</code> ）した後のものも眺めてみる。</p><details><summary>変換後ファイルの EXIF (一応これも折りたたみ)</summary><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>~/Downloads 
+❯ exiftool image1.webp 
+ExifTool Version Number         : 12.42
+File Name                       : image1.webp
+Directory                       : .
+File Size                       : <span style=color:#ae81ff>55</span> kB
+File Modification Date/Time     : 2022:09:24 22:40:12+09:00
+File Access Date/Time           : 2022:09:24 22:40:12+09:00
+File Inode Change Date/Time     : 2022:09:24 22:40:12+09:00
+File Permissions                : -rw-r--r--
+File Type                       : WEBP
+File Type Extension             : webp
+MIME Type                       : image/webp
+VP8 Version                     : <span style=color:#ae81ff>0</span> <span style=color:#f92672>(</span>bicubic reconstruction, normal loop<span style=color:#f92672>)</span>
+Image Width                     : <span style=color:#ae81ff>680</span>
+Horizontal Scale                : <span style=color:#ae81ff>0</span>
+Image Height                    : <span style=color:#ae81ff>510</span>
+Vertical Scale                  : <span style=color:#ae81ff>0</span>
+Image Size                      : 680x510
+Megapixels                      : 0.347
+
+~/Downloads 
+❯ 
+</code></pre></div><p>折りたたまなくても良かったかもしれない</p></details><p>だいぶスッキリした。</p><h3 id=画像解像度について>画像解像度について</h3><p>4032x3024 の解像度で見たくなるような写真を載せる予定も撮る予定も無いので、画像の解像度も適当に縮小する。</p><p>どのくらいの解像度にするかについてだが、単純にブログの今の記事エリアの横幅が約680pxなので、
+基本的には 680x680 に収まるくらいで縮小する様にした。</p><p>今はトリミングとか加工したりもせず撮ったものをそのまま縮小して載せているが、PCの画面キャプチャだったり細長い画像だったりが出てきたら適宜調整することになりそうな気はする。</p><p>また、そのうち画像の拡大ホップアップ（lightbox ？）とかは仕込みたいとは思っているので、そうなったら改めて考えるつもりでいる。</p><h2 id=あとがき>あとがき</h2><p>記事にまとめるために色々調べていると都度新しい知見があり、迷走しつつ記事を書いている。</p><ul><li>最初は heif-convert, convert, exiftool の3コマンドで最終的に JPEG を使うつもりで記事を書いていた</li><li>記事としてまとめる中で convert コマンド一発でできることが分かり、記事の構成を変更して書き直し</li><li>画像フォーマットとして WebP を認識して、良さそうだったのでその形式を使う方向でまた修正</li><li>guetzli を使うのが良いんじゃないか？ ← イマココ</li></ul><p>新しい知見それ自体に関しては、記事としてまとめる事で気付けた（アウトプットする事で得られた）メリットと考えても良いかなとは思っている。
+下調べが足りないという説もあるが、記事として書き始めた時点でブログに載せる用の画像を変換するという目的自体は達成していたので、
+その時点で追加で調べるという考えにならなかったのは仕方ないかなという感じ。</p><p>ただ、毎回この調子で書き直しになるのはしんどいし、記事が完成しなくて途中で放置することにも繋がりそうなので、
+適当なタイミングで記事としてあげてしまうとかのバランスは少し考えても良いんだろうな、とも思った。</p><p>guetzli に関しては追々調べてみることにして今回は諦め。</p><p>各ファイル形式の比較もそのうち改めて調べてまとめてみようと思う。</p></div><footer class=post__footer><div class="post__tags tags clearfix"><svg class="tags__badge icon icon-tag" width="16" height="16" viewBox="0 0 32 32"><path d="M32 19c0 1-1 2-1 2L21 31s-1 1-2 1-2-1-2-1L2 16c-1-1-1.4-2-1.4-2S0 12.5.0 11V3C0 1.5.8.8.8.8S1.5.0 3 0h8c1.5.0 3 .6 3 .6S15 1 16 2l15 15s1 1 1 2zM7 10a3 3 0 100-6 3 3 0 000 6z"/></svg><ul class=tags__list><li class=tags__item><a class="tags__link btn" href=/tags/%E3%83%96%E3%83%AD%E3%82%B0/ rel=tag>ブログ</a></li><li class=tags__item><a class="tags__link btn" href=/tags/linux/ rel=tag>Linux</a></li></ul></div></footer></article></main></div><aside class=sidebar><div class="widget-search widget"><form class=widget-search__form role=search method=get action=https://google.com/search><label><input class=widget-search__field type=search placeholder=SEARCH… name=q aria-label=SEARCH…></label>
+<input class=widget-search__submit type=submit value=Search>
+<input type=hidden name=sitesearch value=https://blog.shida-ws.net/></form></div><div class="widget-recent widget"><h4 class=widget__title>Recent Posts</h4><div class=widget__content><ul class=widget__list><li class=widget__item><a class=widget__link href=/posts/2022/09/24/image-conversion-for-blog/>写真をブログに乗せるための変換コマンド</a></li><li class=widget__item><a class=widget__link href=/posts/2022/09/19/started-sutra-copying/>写経を始めた</a></li><li class=widget__item><a class=widget__link href=/posts/2022/09/08/architecture-of-this-blog/>このブログのシステム構成</a></li><li class=widget__item><a class=widget__link href=/posts/2022/09/07/purpose-of-a-blog/>ブログに期待していること</a></li><li class=widget__item><a class=widget__link href=/posts/2022/08/31/first-post/>最初の投稿</a></li></ul></div></div><div class="widget-taglist widget"><h4 class=widget__title>Tags</h4><div class=widget__content><a class="widget-taglist__link widget__link btn" href=/tags/blog/ title=Blog>Blog</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/github/ title=GitHub>GitHub</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/hugo/ title=Hugo>Hugo</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/linux/ title=Linux>Linux</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/%E3%83%96%E3%83%AD%E3%82%B0/ title=ブログ>ブログ</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/%E5%86%99%E7%B5%8C/ title=写経>写経</a>
+<a class="widget-taglist__link widget__link btn" href=/tags/%E9%9B%91%E8%A8%98/ title=雑記>雑記</a></div></div></aside></div><footer class=footer><div class="container footer__container flex"><div class=footer__copyright>&copy; 2022 shida.
+<span class=footer__copyright-credits>Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and <a href=https://github.com/Vimux/Mainroad/ rel="nofollow noopener" target=_blank>Mainroad</a> theme.</span></div></div></footer></div><script async defer src=/js/menu.js></script></body></html>
