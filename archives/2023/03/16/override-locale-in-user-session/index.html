@@ -78,7 +78,7 @@ xdg-user-dirs を使ったパターンでも試したのでその場合の設定
 </span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#MUSIC=Documents/Music</span>
 </span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#PICTURES=Documents/Pictures</span>
 </span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#VIDEOS=Documents/Videos</span>
-</span></span></code></pre></div></details><br><p>ユーザディレクトリの指定としては xdg-user-dirs を使わない場合と同じような感じで、
+</span></span></code></pre></div></details><p>ユーザディレクトリの指定としては xdg-user-dirs を使わない場合と同じような感じで、
 <code>${XDG_CONFIG_HOME}/user-dirs.dirs</code> にファイルを作成する。
 （xdg-user-dirs を使わないパターンと指定方法が若干違うが、絶対パス or ホームディレクトリからの相対パスでどっちでも良い）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#79c0ff>DESKTOP</span><span style=color:#ff7b72;font-weight:700>=</span>Desktop
 </span></span><span style=display:flex><span><span style=color:#79c0ff>DOWNLOAD</span><span style=color:#ff7b72;font-weight:700>=</span>Downloads
@@ -146,7 +146,7 @@ xdg-user-dirs を使ったパターンでも試したのでその場合の設定
 </span></span><span style=display:flex><span>export LANG LANGUAGE LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY <span style=color:#79c0ff>\
 </span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>       LC_MESSAGES LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT <span style=color:#79c0ff>\
 </span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>       LC_IDENTIFICATION
-</span></span></code></pre></div></details><br><p>ただ、 <code>/etc/locale.conf</code> に関しては systemd での起動時どこか早いタイミングで別途読み込みが行われているらしく、
+</span></span></code></pre></div></details><p>ただ、 <code>/etc/locale.conf</code> に関しては systemd での起動時どこか早いタイミングで別途読み込みが行われているらしく、
 lightdm のラッパースクリプトを実行するタイミングで既に LANG 変数がセットされているため、
 読み込み処理が行われないような感じになっていた。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ <span style=color:#79c0ff>PAGER</span><span style=color:#ff7b72;font-weight:700>=</span>cat man locale.conf | head -10
 </span></span><span style=display:flex><span>LOCALE.CONF<span style=color:#ff7b72;font-weight:700>(</span>5<span style=color:#ff7b72;font-weight:700>)</span>                                                 locale.conf                                                LOCALE.CONF<span style=color:#ff7b72;font-weight:700>(</span>5<span style=color:#ff7b72;font-weight:700>)</span>
