@@ -1,0 +1,64 @@
+<!doctype html><html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>Hugo の Image Processing を使ってサムネイルを生成する - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="Hugo の Image Processing を使ってサムネイル画像の生成、記事への画像挿入をする。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="Hugo の Image Processing を使ってサムネイルを生成する"><meta property="og:description" content="Hugo の Image Processing を使ってサムネイル画像の生成、記事への画像挿入をする。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2022/11/08/hugo-image-processing-for-thumbnail/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2022-11-08T08:49:27+09:00"><meta property="article:modified_time" content="2022-11-08T08:49:27+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/about/>About</a></li></ul></nav></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title>Hugo の Image Processing を使ってサムネイルを生成する</h1></header><section class=article_body><p>Hugo の Image Processing を使ってサムネイル画像の生成、記事への画像挿入をする。</p><p><a href=/posts/2022/10/28/implement-baguettebox-js-in-hugo/>前回の記事</a> で baguetteBox.js を使うと書いたばかりだが、
+Hugo の標準機能として画像のリサイズなどの画像処理機能を持っていてサムネイルの作成等もできるらしいので試してみる。</p><h2 id=実装>実装</h2><h3 id=ショートコードの作成>ショートコードの作成</h3><p>実装に関しては公式の Example や先人の記事を参考にさせてもらった。
+（記事のURLは参考リンクにまとめて記載）
+それらと似たような中身ではあるが一応貼っておくと、最終的なショートコードとしては以下。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html:layouts/shortcodes/image.html data-lang=html:layouts/shortcodes/image.html><span style=display:flex><span>{{- $src := .Get &#34;src&#34; -}}
+</span></span><span style=display:flex><span>{{- $alt := .Get &#34;alt&#34; -}}
+</span></span><span style=display:flex><span>{{- $size := .Get &#34;size&#34; -}}
+</span></span><span style=display:flex><span>{{- $caption := .Get &#34;caption&#34; -}}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>{{ if or ( not $src ) ( not $alt )  }}
+</span></span><span style=display:flex><span>  {{ errorf &#34;missing value of params &#39;src&#39; or &#39;alt&#39; : %s&#34; .Position }}
+</span></span><span style=display:flex><span>{{ end }}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>{{ $img := .Page.Resources.GetMatch $src }}
+</span></span><span style=display:flex><span>{{ $img_src := $img.RelPermalink }}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>{{ $thumb := $img }}
+</span></span><span style=display:flex><span>{{ if $size }}
+</span></span><span style=display:flex><span>  {{ $thumb = $img.Fit $size }}
+</span></span><span style=display:flex><span>{{ end }}
+</span></span><span style=display:flex><span>{{ $thumb_src := $thumb.RelPermalink }}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;<span style=color:#7ee787>figure</span>&gt;
+</span></span><span style=display:flex><span>  &lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ $img_src }}&#34;</span> target<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;_self&#34;</span> &gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>img</span> src<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ $thumb_src }}&#34;</span> alt<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ $alt }}&#34;</span>&gt;
+</span></span><span style=display:flex><span>  &lt;/<span style=color:#7ee787>a</span>&gt;
+</span></span><span style=display:flex><span>  {{ if $caption }}
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>figcaption</span>&gt;
+</span></span><span style=display:flex><span>      {{ $caption }}
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>figcaption</span>&gt;
+</span></span><span style=display:flex><span>  {{ end }}
+</span></span><span style=display:flex><span>&lt;/<span style=color:#7ee787>figure</span>&gt;
+</span></span></code></pre></div><h3 id=その他>その他</h3><p>一通り動くのを確認してコミットしようとした段階で気付いたが、
+Image Processing で生成した画像は <code>/resources/_gen/</code> 配下にファイルとして配置される様子。</p><pre tabindex=0><code>❯ tree resources/
+resources/
+└── _gen
+    ├── assets
+    └── images
+        └── posts
+            └── 2022
+                └── 11
+                    └── 08
+                        └── hugo-image-processing-for-thumbnail
+                            └── image
+                                └── image1_huddb85fd66c8681e58f877494e6396a92_92186_400x400_fit_q75_h2_box_2.webp
+
+9 directories, 1 file
+</code></pre><p>また、 Hugo ビルド時 <code>public</code> 配下に出力されるHTML等の生成物とは違い、
+<code>hugo server -D</code> などで仮想サーバを立ち上げる際にも生成されていた。</p><p>今のブログ構成として Hugo プロジェクトのリポジトリと Hugo 生成物のリポジトリを分けており、
+Hugo プロジェクトのリポジトリの方にはコミットする必要の無いモノなので <code>.gitignore</code> に追加した。</p><pre tabindex=0><code class=language-:.gitignore data-lang=:.gitignore>/.hugo_build.lock
+/public/
+/resources/_gen/
+</code></pre><p>とはいえ、ローカルファイルとして生成されることは変わらないので気付いたらディレクトリ肥大化してそうな気がするのと、
+画像増えていった時大丈夫なんだろうか、というのは少し気になった。</p><p>が、仮に何か問題になるにしてもそれなりに先だろうということで、ここではそのうち考えようくらいに留めておく。</p><h2 id=実行例>実行例</h2><pre tabindex=0><code class=language-html:動作確認コード data-lang=html:動作確認コード>{{&lt; image src=&#34;images/image1.webp&#34; alt=&#34;動作確認画像&#34; size=&#34;400x400&#34; caption=&#34;市ヶ谷の橋から撮った写真&#34; &gt;}}
+</code></pre><figure><a href=/archives/2022/11/08/hugo-image-processing-for-thumbnail/images/image1.webp target=_self><img src=/archives/2022/11/08/hugo-image-processing-for-thumbnail/images/image1_huddb85fd66c8681e58f877494e6396a92_92186_400x400_fit_q75_h2_box_2.webp alt=動作確認画像></a><figcaption>市ヶ谷の橋から撮った写真</figcaption></figure><h2 id=baguetteboxjs-とどっち使うか>baguetteBox.js とどっち使うか</h2><p>今後はこっちを使っていく予定。</p><p>baguetteBox.js を使う場合と比べて良いなと思ったポイントとしては以下辺り</p><ul><li>外部のライブラリに依存しない Hugo の標準機能である点<ul><li>使っているテーマに手を加えなくて良い</li></ul></li><li>面倒で作らなくなりそうと思っていたサムネイル生成を手動でやらなくても良い点</li><li>ブラウザで画像を直接表示する際の挙動になるので、素直に操作できると感じた<ul><li>baguetteBox.js を使った場合の画像表示中の操作感に若干違和感があった<ul><li>元画像を表示している最中の操作（拡大縮小スクロール）が、 baguetteBox.js レイヤー裏の記事部分にも効く（ちらつく）</li><li>PCで見ている時、画像の表示サイズの上限がブラウザウィンドウの横幅もしくは縦幅になる</li></ul></li></ul></li></ul><p>baguetteBox.js の方が格好良いは格好良いので若干勿体無い気もしたが、
+画像の表示はブラウザで画像単体表示した時の挙動に任せてしまってブラウザバックで記事に戻る、の方が個人的には見やすいかなと感じた。
+（ Qiita が似た感じなのでそれに慣れていたからかもしれない）</p><h2 id=あとがき>あとがき</h2><p>この記事を含め Hugo の設定を弄った事それ自体を記事にしたりしているが、
+弄った結果それ以前の記事が意図した通りに表示されなくなる事もあるということを理解した。</p><p>具体的には、前回の記事内で baguetteBox.js 用のショートコードを作って記事内の実行例でもそのまま使っていたのだが、
+今後は <code>{{&lt; image 〜 >}}</code>を使うということで、 baguetteBox.js 用のショートコードは削除して手を加えたテーマも戻したい。
+ただ当たり前の話ではあるが、それらを使っている記事も修正する必要があり特に実行例部分の修正が面倒になっている。
+（とりあえず GIF に置き換えようと思ってはいるが）</p><p>世の中の Hugo でブログしてる人の中には、Hugo のブログはそれとして持ちつつ、
+Zenn 等の別媒体にブログ自体のメンテナンスに関する記事を書いたりしている人も居て、
+こういう事があるのを考えると「なるほどなぁ」と思ったりした。</p><h2 id=参考リンク>参考リンク</h2><ul><li><a href=https://gohugo.io/content-management/image-processing/>Image Processing | Hugo</a></li><li><a href=https://maku77.github.io/hugo/misc/image-processing.html>大きな画像ファイルから自動的に小さなサムネイル画像を生成する (Image Processing) - まくまくHugoノート</a></li><li><a href=https://developer.mozilla.org/ja/docs/Web/HTML/Element/figure>&lt;figure>: キャプションが付けられる図要素 - HTML: HyperText Markup Language | MDN</a></li></ul></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_group title"><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>Hugo の Image Processing を使ってサムネイルを生成する</dd></div></div><div class="article_meta_group timestamp"><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2022-11-08T08:49:27+09:00>2022-11-08</time></dd></div></div><div class="article_meta_group taxonomy"><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/%E3%83%96%E3%83%AD%E3%82%B0/>ブログ</a></li><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/hugo/>Hugo</a></li></ul></dd></div></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#実装>実装</a><ul><li><a href=#ショートコードの作成>ショートコードの作成</a></li><li><a href=#その他>その他</a></li></ul></li><li><a href=#実行例>実行例</a></li><li><a href=#baguetteboxjs-とどっち使うか>baguetteBox.js とどっち使うか</a></li><li><a href=#あとがき>あとがき</a></li><li><a href=#参考リンク>参考リンク</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>

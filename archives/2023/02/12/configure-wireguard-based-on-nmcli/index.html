@@ -1,0 +1,278 @@
+<!doctype html><html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>nmcli を用いた WireGuard の設定 - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="自宅用 VPN として WireGuard のセットアップを行った。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="nmcli を用いた WireGuard の設定"><meta property="og:description" content="自宅用 VPN として WireGuard のセットアップを行った。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2023/02/12/configure-wireguard-based-on-nmcli/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2023-02-12T12:30:25+09:00"><meta property="article:modified_time" content="2023-02-15T11:40:49+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/about/>About</a></li></ul></nav></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title>nmcli を用いた WireGuard の設定</h1></header><section class=article_body><p>自宅用 VPN として WireGuard のセットアップを行った。</p><p>最近図書館によく行くようになってそこのフリー Wi-Fi をよく使っているのだが、
+「フリー Wi-Fi 使うなら VPN とか使った方が良いのかな」とぼんやり考えていた。
+で、最初は OpenVPN で組もうかなと思い軽く下調べをしていたのだが、
+その中で WireGuard というのがあるのを認識して触ってみたくなり組んだ。
+（動機としては触ってみたかったの方がメインかも知れない）</p><p>ひとまず無事動いたのでやったことをまとめる。</p><h2 id=wireguard-について>WireGuard について</h2><p>今回は設定作業に重点を置きたいので、公式サイトのトップページに書いている内容を軽くまとめる程度に留める。
+（もう少し勉強してから別途まとめたい）</p><p>公式サイト: <a href=https://www.wireguard.com/>WireGuard: fast, modern, secure VPN tunnel</a></p><p>WireGuard は既存の VPN と比べて高速かつシンプルであることを目指して開発されていて、売りとしては以下のようなモノ。</p><ul><li>簡単に設定・導入できる（SSH の鍵交換認証で接続するのと同じくらい）</li><li>通信は専用のインタフェースを用いて透過的に行われる</li><li>最先端の暗号技術（暗号化方式やセキュアな設計）を採用している</li><li>少ないコードで実装されていて監査が容易なため、脆弱性が入り込みにくい</li><li>高速な暗号技術と Linux カーネル上で動作することにより、高速に動作する</li></ul><p>複雑化・肥大化してしまった OpenVPN や IPSec といった既存の VPN 技術を代替する、というのを目標にしているっぽい。</p><p>Linux カーネルではバージョン 5.6 からサポート対象になっていて、
+今はクロスプラットフォームでの実装も進んでいる。</p><h2 id=全体図>全体図</h2><p>今回の設定の全体イメージとしては以下のような感じ。</p><figure><a href=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/overview.png target=_self><img src=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/overview_huffdb06d49430961b46a0990de3a146ee_97799_600x600_fit_box_3.png alt=全体図></a></figure><p>通信について補足すると、</p><ul><li>ルータのポートフォワードを使って、サーバの 51820/udp （ WireGuard 用ポート）をインターネットに公開する</li><li>デスクトップPC・ノートPC・スマートフォンは、すべてのパケットを一旦サーバを経由してさせてから改めてインターネットに出る<ul><li>サーバに WireGuard ネットワーク内でのデフォルトゲートウェイの様な働きをさせる</li><li>デスクトップPC は実際には WireGuard 接続使う予定は無い（今回の作業のために設定する）</li></ul></li></ul><p>という感じ。</p><h2 id=設定作業>設定作業</h2><p>本題の設定作業についてまとめる。</p><p>最初にやることをざっくりまとめておくと、以下のような流れで作業していく。</p><ul><li>WireGuard インタフェースの作成<ul><li>WireGuard は専用の仮想インタフェースを使って通信するため、これを作成する</li></ul></li><li>WireGuard Peer の設定<ul><li>WireGuard サーバ・クライアントそれぞれで、作成した WireGuard インタフェースを介して通信する相手を登録する <sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup></li></ul></li><li>サーバでの転送設定<ul><li>クライアントから送られたインターネット宛パケットをサーバ側で適切に中継するための設定を行う</li></ul></li><li>ルータでのポートフォワード設定<ul><li>インターネットから WireGuard サーバと通信できる様にするために、ルータでのポートフォワード設定を行う</li></ul></li><li>接続確認<ul><li>ノート PC を WireGuard クライアントとして設定して、インターネット（スマートフォンでのテザリング）経由で WireGuard 接続で通信できることを確認する</li></ul></li></ul><p>最後にインターネットからアクセスできる様にはするが、
+そこまでは同じネットワークにあるマシン（全体図でのデスクトップPC）をクライアントとして各種設定・疎通確認をしつつ進める。</p><h3 id=wireguard-インタフェースの作成>WireGuard インタフェースの作成</h3><p>まずは WireGuard 用の仮想インタフェースを作成する。</p><p>WireGuard インタフェースを作成する方法としては <code>ip</code> 、 <code>nmcli</code> 、 <code>wg-quick</code> 等色々あるのだが、
+自分のマシンはネットワーク管理を NetworkManager 経由で行っているというのもあり <code>nmcli</code> で行うことにした。</p><p>鍵の生成や設定確認等で wg というコマンドを使うので以下でインストールしておく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># インストール（ Arch Linux の場合）</span>
+</span></span><span style=display:flex><span>$ sudo pacman -S wireguard-tools
+</span></span></code></pre></div><h4 id=サーバ側設定>サーバ側設定</h4><p>サーバ側で以下コマンドでインタフェースを作成する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard 用の仮想インタフェース wg0 の作成、設定</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection add type wireguard con-name wireguard-server ifname wg0 autoconnect no
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-server ipv4.method manual ipv4.address 10.0.0.1/24
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-server wireguard.private-key <span style=color:#a5d6ff>`</span>wg genkey<span style=color:#a5d6ff>`</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-server wireguard.listen-port <span style=color:#a5d6ff>51820</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># コネクションの自動起動を有効にする（このタイミングで一緒に up される）</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-server autoconnect yes
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard インタフェース ( wg0 ) が有効（ STATE = connected ）になったことを確認</span>
+</span></span><span style=display:flex><span>$ nmcli device status
+</span></span></code></pre></div><h4 id=クライアント側設定>クライアント側設定</h4><p>次にクライアント側でも以下コマンドでインターフェースを作成する。
+サーバ側とやっていることは概ね一緒だが違うところとしては以下。</p><ul><li>クライアント側は VPN の有効/無効を手動で切り替えたいため、 autoconnect を no にしている</li><li>WireGuard ネットワークで使うアドレスは当然だが違う</li><li>NetworkManager のコネクション名も一応変えている</li></ul><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard 用の仮想インタフェース wg0 の作成、設定</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection add type wireguard con-name wireguard-client ifname wg0 autoconnect no
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-client ipv4.method manual ipv4.address 10.0.0.2/24
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-client wireguard.private-key <span style=color:#a5d6ff>`</span>wg genkey<span style=color:#a5d6ff>`</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection modify wireguard-client wireguard.listen-port <span style=color:#a5d6ff>51820</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># コネクションを手動で up する</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection up wireguard-client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard インタフェース ( wg0 ) が有効（ STATE = connected ）になったことを確認</span>
+</span></span><span style=display:flex><span>$ nmcli device status
+</span></span></code></pre></div><h3 id=wireguard-peer-の設定>WireGuard Peer の設定</h3><p>WireGuard インタフェースは有効になったが、
+まだサーバ、クライアント間での通信はできないため、お互いを Peer として登録して通信できる様にする。</p><p>作業としては、</p><ul><li>クライアント側の WireGuard 公開鍵を確認して、サーバ側の Peer 設定に追加</li><li>サーバ側の WireGuard 公開鍵を確認して、クライアント側の Peer 設定に追加</li></ul><h4 id=サーバ側設定-1>サーバ側設定</h4><p>まずはサーバ側に Peer 相手としてクライアントを登録するが、そのためにクライアント側の WireGuard 公開鍵を確認する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># クライアント側の WireGuard 公開鍵の値を取得</span>
+</span></span><span style=display:flex><span>$ sudo wg show wg0 public-key
+</span></span><span style=display:flex><span>cCemX4jMbyI5TkWcxn8M9XUhpPzAGgpp3/xdRXJR1AE<span style=color:#ff7b72;font-weight:700>=</span>
+</span></span></code></pre></div><p>このクライアント側の公開鍵の値を元に、サーバ側の NetworkManager のコネクション設定に追加する。
+ただ先の WireGuard インタフェースの設定と違い nmcli コマンドが対象プロパティに対応していないため、
+適当なエディタなりで設定ファイルに直接追記する必要がある。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo vim /etc/NetworkManager/system-connections/wireguard-server.nmconnection
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ----- ここから</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>wireguard-peer.cCemX4jMbyI5TkWcxn8M9XUhpPzAGgpp3/xdRXJR1AE<span style=color:#ff7b72;font-weight:700>=]</span>
+</span></span><span style=display:flex><span>allowed-ips<span style=color:#ff7b72;font-weight:700>=</span>10.0.0.2/32;
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ----- ここまで</span>
+</span></span></code></pre></div><p>設定の補足としては以下</p><ul><li>allowed-ips<ul><li>WireGuard インタフェースを使って通信するアドレスを指定する<ul><li>キー名から WireGuard インタフェースでの受信許可するアドレスとかに見えるが、送信対象とするパケットを指定する意味もある</li><li>この辺の話はこの方の記事がわかりやすかった<ul><li><a href="https://www.infrastudy.com/?p=1065">WireGuardのAllowed IPsの設定についての補足 | ネットワークとともに</a></li></ul></li></ul></li><li>サーバ側では Peer 相手の WireGuard インタフェースのアドレスを <code>/32</code> で指定する。</li></ul></li></ul><p>追記が済んだら WireGuard インタフェースの設定に反映する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 追記した内容をコネクションに反映させる</span>
+</span></span><span style=display:flex><span>$ sudo nmcli connection load /etc/NetworkManager/system-connections/wireguard-server.nmconnection
+</span></span><span style=display:flex><span>$ sudo nmcli connection up wireguard-server
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># peer 設定が追加されたことを確認する</span>
+</span></span><span style=display:flex><span>$ sudo wg show
+</span></span></code></pre></div><h4 id=クライアント側設定-1>クライアント側設定</h4><p>同様にクライアント側の Peer 相手としてサーバを登録するため、サーバ側の WireGuard 公開鍵を確認する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ sudo wg show wg0 public-key
+</span></span><span style=display:flex><span>aaX+7NP+w93BL08NyiazchFwUKmEaLFMQLhpBdhK1Ak<span style=color:#ff7b72;font-weight:700>=</span>
+</span></span></code></pre></div><p>クライアント側の NetworkManager のコネクション設定に Peer を追加する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo nvim /etc/NetworkManager/system-connections/wireguard-client.nmconnection
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ----- ここから</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>wireguard-peer.aaX+7NP+w93BL08NyiazchFwUKmEaLFMQLhpBdhK1Ak<span style=color:#ff7b72;font-weight:700>=]</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>endpoint</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.15:51820
+</span></span><span style=display:flex><span>allowed-ips<span style=color:#ff7b72;font-weight:700>=</span>0.0.0.0/0;
+</span></span><span style=display:flex><span>persistent-keepalive<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>25</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ----- ここまで</span>
+</span></span></code></pre></div><p>サーバ側で設定したものより若干パラメータが多く値も違うが、理由としては以下。</p><ul><li>endpoint<ul><li>クライアントからアクセス可能な Peer のアドレスと WireGuard が Listen しているポート<ul><li>今回の使い方では常にクライアント側から WireGuard の通信を開始するため、クライアント側がサーバ側のアドレスを知っておく必要がある</li></ul></li><li>一旦ローカルネットワーク内での通信確認をしたいため、ローカルネットワークのアドレスにしている<ul><li>最終的にはインターネット越しにアクセスするので、後の方で修正する</li></ul></li><li>ドメイン名でアクセス可能ならドメイン名でも可</li></ul></li><li>allowed-ips<ul><li>クライアントはサーバと違いすべての通信をこの WireGuard Peer （サーバ）経由にしたいので <code>0.0.0.0/0</code></li></ul></li><li>persistent-keepalive<ul><li>NAT 下で WireGuard 通信を行う場合に使い、空パケットを送る間隔を単位で指定する<ul><li>一定時間通信がない場合に NAT マッピングから消されたり、ステートフルファイアウォールの設定によっては遮断されたりする可能性があるため</li></ul></li><li>man を見る限り、設定する場合は 25 秒がひとつの目安になりそうなので今回はそれを使う</li></ul></li></ul><p>サーバでやったのと同様に、 WireGuard インタフェースの設定に反映させる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo nmcli connection load /etc/NetworkManager/system-connections/wireguard-client.nmconnection
+</span></span><span style=display:flex><span>$ sudo nmcli connection up wireguard-client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ sudo wg show
+</span></span></code></pre></div><h4 id=一旦接続確認>一旦接続確認</h4><p>一旦ここで、ローカルネットワーク内でサーバとクライントが WireGuard インタフェースを介して通信できていることを確認する。</p><p>クライアントからサーバへの ping による疎通確認</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ ip route get 10.0.0.1
+</span></span><span style=display:flex><span>10.0.0.1 dev wg0 src 10.0.0.2 uid <span style=color:#a5d6ff>1000</span>
+</span></span><span style=display:flex><span>    cache
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ ping 10.0.0.1
+</span></span><span style=display:flex><span>PING 10.0.0.1 <span style=color:#ff7b72;font-weight:700>(</span>10.0.0.1<span style=color:#ff7b72;font-weight:700>)</span> 56<span style=color:#ff7b72;font-weight:700>(</span>84<span style=color:#ff7b72;font-weight:700>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from 10.0.0.1: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>1</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>64</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>1.22 ms
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from 10.0.0.1: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>2</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>64</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>1.30 ms
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from 10.0.0.1: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>3</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>64</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>1.29 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- 10.0.0.1 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>3</span> packets transmitted, <span style=color:#a5d6ff>3</span> received, 0% packet loss, time 2003ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#ff7b72;font-weight:700>=</span> 1.224/1.270/1.295/0.032 ms
+</span></span></code></pre></div><p>WireGuard インタフェース経由で通信できているのが確認できた。</p><h3 id=サーバでの転送設定>サーバでの転送設定</h3><p>ここまでで WireGuard インターフェースを介した VPN 接続はできたが、
+まだこの状態だとクライアントはインターネットに出られない。</p><p>クライアントが送ってきたインターネット宛のパケットを、
+サーバ側で転送するための設定を追加する。</p><p>まず転送を行える様にするため、以下でカーネルパラメータを設定しておく。
+（再起動後のために設定ファイルへの追記もセットで行っておく）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>sudo sysctl net.ipv4.ip_forward<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>sudo sh -c <span style=color:#a5d6ff>&#34;echo &#39;net.ipv4.ip_forward=1&#39; &gt;&gt; /etc/sysctl.d/99-sysctl.conf&#34;</span>
+</span></span></code></pre></div><p>次に WireGuard インタフェースに届いたパケットを実際にどう転送するための設定を行う。</p><p>先人の記事を色々見た感じ、ファイアウォールでの転送設定は WireGuard インタフェースの up/down に合わせて動的に落としたりするのが多かったのでそれに習う。
+サーバ側の WireGuard インタフェースは上げっぱなしにしておくつもりなので静的に設定しておくでも良いのだが、
+NetworkManager の dispatcher という仕組みを使えば実装できそうだったので触ってみようかなと思ったのもある。</p><p>また、しばらく触ってなかったので知らなかったが、
+ファイアウォールの設定には iptables ではなく nftables を使うのが今風らしいので nftables を使うことにした。</p><h4 id=nftables-の初期設定>nftables の初期設定</h4><p>まず nftables のインストールする。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># インストール（ Arch Linux の場合）</span>
+</span></span><span style=display:flex><span>$ sudo pacman -S nftables
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># コマンド実行確認（ファイアウォールのルールは空なので何も表示されないはず）</span>
+</span></span><span style=display:flex><span>$ sudo nft list ruleset
+</span></span></code></pre></div><p>まずベースになるルールセットを <code>/etc/nftables.conf</code> に作成する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-weight:700;font-style:italic>#!/usr/bin/nft -f
+</span></span></span><span style=display:flex><span><span style=color:#8b949e;font-weight:700;font-style:italic></span>
+</span></span><span style=display:flex><span>table inet filter <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>  chain input <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>    type filter hook input priority filter
+</span></span><span style=display:flex><span>    policy drop
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    ct state invalid drop
+</span></span><span style=display:flex><span>    ct state <span style=color:#ff7b72;font-weight:700>{</span> established, related <span style=color:#ff7b72;font-weight:700>}</span> accept
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    iifname lo accept
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    ip protocol icmp accept
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    tcp dport ssh accept
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  chain forward <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>    type filter hook forward priority filter
+</span></span><span style=display:flex><span>    policy drop
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>}</span>
+</span></span></code></pre></div><p>これを systemd 経由でファイアウォールに反映するのと、システム起動時にも読み込まれる様にする。<br>（ちなみにユニットファイルを見ると分かるが、 nftables.service は nft コマンドを実行してを設定ファイルを読み込むだけで、何かデーモンが立ち上がるわけではない）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo systemctl start nftables.service
+</span></span><span style=display:flex><span>$ sudo systemctl enable nftables.service
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 反映されたことを確認</span>
+</span></span><span style=display:flex><span>$ sudo nft list ruleset
+</span></span></code></pre></div><h4 id=networkmanager-dispatcher-の設定>NetworkManager dispatcher の設定</h4><p>次に WireGuard インタフェースの up/down に合わせて必要なルールを足したり消したりするために、
+<code>/etc/NetworkManager/dispatcher.d/wireguard-worward.sh</code> に以下の様なスクリプトを作成する</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-weight:700;font-style:italic>#!/bin/sh
+</span></span></span><span style=display:flex><span><span style=color:#8b949e;font-weight:700;font-style:italic></span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>WG_IF</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;wg0&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>PUB_IF</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;eno1&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>interface</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#79c0ff>$1</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>status</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#79c0ff>$2</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>if</span> <span style=color:#ff7b72;font-weight:700>[</span> <span style=color:#79c0ff>$interface</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#79c0ff>$WG_IF</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>case</span> <span style=color:#79c0ff>$status</span> in
+</span></span><span style=display:flex><span>    up<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;rule inet filter input iifname </span><span style=color:#79c0ff>$PUB_IF</span><span style=color:#a5d6ff> udp dport 51820 accept comment \&#34;for wireguard\&#34;&#34;</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;rule inet filter input iifname </span><span style=color:#79c0ff>$WG_IF</span><span style=color:#a5d6ff> accept comment \&#34;for wireguard\&#34;&#34;</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;rule inet filter forward iifname </span><span style=color:#79c0ff>$WG_IF</span><span style=color:#a5d6ff> accept comment \&#34;for wireguard\&#34;&#34;</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;rule inet filter forward oifname </span><span style=color:#79c0ff>$WG_IF</span><span style=color:#a5d6ff> accept comment \&#34;for wireguard\&#34;&#34;</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;chain inet filter postrouting { type nat hook postrouting priority srcnat ; }&#34;</span>
+</span></span><span style=display:flex><span>      nft add <span style=color:#a5d6ff>&#34;rule inet filter postrouting iifname </span><span style=color:#79c0ff>$WG_IF</span><span style=color:#a5d6ff> oifname </span><span style=color:#79c0ff>$PUB_IF</span><span style=color:#a5d6ff> masquerade comment \&#34;for wireguard\&#34;&#34;</span>
+</span></span><span style=display:flex><span>      ;;
+</span></span><span style=display:flex><span>    down<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>      nft --handle list chain inet filter input <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | grep -e <span style=color:#a5d6ff>&#39;for wireguard&#39;</span> <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | sed <span style=color:#a5d6ff>&#39;s/.* # handle \(.*\)/\1/&#39;</span> <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | xargs -I<span style=color:#ff7b72;font-weight:700>{}</span> nft delete <span style=color:#a5d6ff>&#39;rule inet filter input handle {}&#39;</span>
+</span></span><span style=display:flex><span>      nft --handle list chain inet filter forward <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | grep -e <span style=color:#a5d6ff>&#39;for wireguard&#39;</span> <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | sed <span style=color:#a5d6ff>&#39;s/.* # handle \(.*\)/\1/&#39;</span> <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>        | xargs -I<span style=color:#ff7b72;font-weight:700>{}</span> nft delete <span style=color:#a5d6ff>&#39;rule inet filter forward handle {}&#39;</span>
+</span></span><span style=display:flex><span>      nft delete <span style=color:#a5d6ff>&#34;chain inet filter postrouting&#34;</span>
+</span></span><span style=display:flex><span>      ;;
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>esac</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>fi</span>
+</span></span></code></pre></div><p>パーミッションも適切に設定する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo chown root:root /etc/NetworkManager/dispatcher.d/wireguard-forward.sh
+</span></span><span style=display:flex><span>$ sudo chmod <span style=color:#a5d6ff>744</span> /etc/NetworkManager/dispatcher.d/wireguard-forward.sh
+</span></span></code></pre></div><p>上記スクリプトが呼ばれる様にサービスを起動する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo systemctl start NetworkManager-dispatcher.service
+</span></span></code></pre></div><p>WireGuard インタフェースを up/down したりして想定通り反映されることを確認する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo nft list ruleset
+</span></span><span style=display:flex><span>$ sudo nmcli connection down wireguard-server
+</span></span><span style=display:flex><span>$ sudo nft list ruleset
+</span></span><span style=display:flex><span>$ sudo nmcli connection up wireguard-server
+</span></span><span style=display:flex><span>$ sudo nft list ruleset
+</span></span></code></pre></div><p>ちなみに今回の設定の場合、 WireGuard インタフェースを up した状態で以下の様なルールセットになる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo nft list ruleset
+</span></span><span style=display:flex><span>table inet filter <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>        chain input <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>                type filter hook input priority filter; policy drop;
+</span></span><span style=display:flex><span>                ct state invalid drop
+</span></span><span style=display:flex><span>                ct state <span style=color:#ff7b72;font-weight:700>{</span> established, related <span style=color:#ff7b72;font-weight:700>}</span> accept
+</span></span><span style=display:flex><span>                iifname <span style=color:#a5d6ff>&#34;lo&#34;</span> accept
+</span></span><span style=display:flex><span>                ip protocol icmp accept
+</span></span><span style=display:flex><span>                tcp dport <span style=color:#a5d6ff>22</span> accept
+</span></span><span style=display:flex><span>                iifname <span style=color:#a5d6ff>&#34;eno1&#34;</span> udp dport <span style=color:#a5d6ff>51820</span> accept comment <span style=color:#a5d6ff>&#34;for wireguard&#34;</span>
+</span></span><span style=display:flex><span>                iifname <span style=color:#a5d6ff>&#34;wg0&#34;</span> accept comment <span style=color:#a5d6ff>&#34;for wireguard&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        chain forward <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>                type filter hook forward priority filter; policy drop;
+</span></span><span style=display:flex><span>                iifname <span style=color:#a5d6ff>&#34;wg0&#34;</span> accept comment <span style=color:#a5d6ff>&#34;for wireguard&#34;</span>
+</span></span><span style=display:flex><span>                oifname <span style=color:#a5d6ff>&#34;wg0&#34;</span> accept comment <span style=color:#a5d6ff>&#34;for wireguard&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        chain postrouting <span style=color:#ff7b72;font-weight:700>{</span>
+</span></span><span style=display:flex><span>                type nat hook postrouting priority srcnat; policy accept;
+</span></span><span style=display:flex><span>                iifname <span style=color:#a5d6ff>&#34;wg0&#34;</span> oifname <span style=color:#a5d6ff>&#34;eno1&#34;</span> masquerade comment <span style=color:#a5d6ff>&#34;for wireguard&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>}</span>
+</span></span></code></pre></div><p>問題なさそうなことが確認できたら NetworkManger-dispacher.service を有効化しておく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo systemctl enable NetworkManger-dispacher.service
+</span></span></code></pre></div><h4 id=インターネットへの疎通確認>インターネットへの疎通確認</h4><p>設定が終わったので、インターネットへの転送がちゃんと行われていることを確認する。</p><p>クライアント、サーバの両方で WireGuard インタフェースを有効にした状態で、
+クライアントから適当なインターネット上のアドレス宛の通信が通ることを確認する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo wg show
+</span></span><span style=display:flex><span>interface: wg0
+</span></span><span style=display:flex><span>  public key: cCemX4jMbyI5TkWcxn8M9XUhpPzAGgpp3/xdRXJR1AE<span style=color:#ff7b72;font-weight:700>=</span>
+</span></span><span style=display:flex><span>  private key: <span style=color:#ff7b72;font-weight:700>(</span>hidden<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>  listening port: <span style=color:#a5d6ff>51820</span>
+</span></span><span style=display:flex><span>  fwmark: 0xcb04
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>peer: aaX+7NP+w93BL08NyiazchFwUKmEaLFMQLhpBdhK1Ak<span style=color:#ff7b72;font-weight:700>=</span>
+</span></span><span style=display:flex><span>  endpoint: 192.168.2.15:51820
+</span></span><span style=display:flex><span>  allowed ips: 0.0.0.0/0
+</span></span><span style=display:flex><span>  latest handshake: <span style=color:#a5d6ff>36</span> seconds ago
+</span></span><span style=display:flex><span>  transfer: 11.41 MiB received, 2.02 MiB sent
+</span></span><span style=display:flex><span>  persistent keepalive: every <span style=color:#a5d6ff>25</span> seconds
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ ip route get 8.8.8.8
+</span></span><span style=display:flex><span>8.8.8.8 dev wg0 table <span style=color:#a5d6ff>51972</span> src 10.0.0.2 uid <span style=color:#a5d6ff>1000</span>
+</span></span><span style=display:flex><span>    cache
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ traceroute 8.8.8.8
+</span></span><span style=display:flex><span>traceroute to 8.8.8.8 <span style=color:#ff7b72;font-weight:700>(</span>8.8.8.8<span style=color:#ff7b72;font-weight:700>)</span>, <span style=color:#a5d6ff>30</span> hops max, <span style=color:#a5d6ff>60</span> byte packets
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>1</span>  10.0.0.1 <span style=color:#ff7b72;font-weight:700>(</span>10.0.0.1<span style=color:#ff7b72;font-weight:700>)</span>  1.166 ms  1.126 ms  1.120 ms
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>2</span>  _gateway <span style=color:#ff7b72;font-weight:700>(</span>192.168.2.1<span style=color:#ff7b72;font-weight:700>)</span>  2.513 ms  2.473 ms  2.470 ms
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>3</span>  192.168.1.1 <span style=color:#ff7b72;font-weight:700>(</span>192.168.1.1<span style=color:#ff7b72;font-weight:700>)</span>  4.313 ms  4.288 ms  4.272 ms
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>中略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>9</span>  * * *
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>10</span>  dns.google <span style=color:#ff7b72;font-weight:700>(</span>8.8.8.8<span style=color:#ff7b72;font-weight:700>)</span>  5.132 ms  5.201 ms  5.165 ms
+</span></span></code></pre></div><h3 id=ルータでのポートフォワード設定>ルータでのポートフォワード設定</h3><p>VPN サーバとして一通り動作することが確認できたので、
+インターネットからサーバにアクセスできるようにするためポートフォワードの設定をする。</p><p>ルータ毎の使い方を書いても仕方ないので説明は省略するが、
+自分の場合は NURO 光から貸与されてる ONU 兼ルータの ZTE F660A と ASUS RT-AC68U の二段になっており、それぞれで以下の感じで設定した。</p><figure><a href=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/router-portforward-zte-f660a.png target=_self><img src=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/router-portforward-zte-f660a_hu9978395c296638181f9bea19e7836689_96542_400x400_fit_box_3.png alt="ZTE F660A でのポートフォワード設定画面キャプチャ"></a><figcaption>ZTE F660A でのポートフォワード設定</figcaption></figure><figure><a href=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/router-portforward-asus-rt-ac68u.png target=_self><img src=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/router-portforward-asus-rt-ac68u_hu36f711d2069a7b27111521ba313c1fa0_147827_400x400_fit_box_3.png alt="ASUS RT-AC68U でのポートフォワード設定画面キャプチャ"></a><figcaption>ASUS RT-AC68U でのポートフォワード設定</figcaption></figure><p>ということで、インターネット公開も済。</p><h3 id=接続確認>接続確認</h3><p>インターネット経由での通信確認をする。</p><p>今回はノートPCをスマートフォンのテザリング経由でインターネットにつないで確認する。</p><h4 id=ノートpcの-wireguard-設定>ノートPCの WireGuard 設定</h4><p>まずサーバから適当な方法で自宅ネットワークのグローバル IP を確認する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ curl globalip.me
+</span></span><span style=display:flex><span>XXX.XXX.XXX.XXX
+</span></span></code></pre></div><p>後はデスクトップ PC でやったのと同じ様に、ノートPCで WireGuard を一通り設定する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard インタフェースの作成（アドレスは適切なモノに書き換える）</span>
+</span></span><span style=display:flex><span>sudo nmcli connection add type wireguard con-name wireguard-client ifname wg0 autoconnect no
+</span></span><span style=display:flex><span>sudo nmcli connection modify wireguard-client ipv4.method manual ipv4.address 10.0.0.3/24
+</span></span><span style=display:flex><span>sudo nmcli connection modify wireguard-client wireguard.private-key <span style=color:#a5d6ff>`</span>wg genkey<span style=color:#a5d6ff>`</span>
+</span></span><span style=display:flex><span>sudo nmcli connection modify wireguard-client wireguard.listen-port <span style=color:#a5d6ff>51820</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># WireGuard Peer の設定（ endpoint として今回はグローバルIP を指定）</span>
+</span></span><span style=display:flex><span>sudo sh -c <span style=color:#a5d6ff>&#34;cat &lt;&lt; __EOF__ &gt;&gt; /etc/NetworkManager/system-connections/wireguard-client.nmconnection
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>[wireguard-peer.aaX+7NP+w93BL08NyiazchFwUKmEaLFMQLhpBdhK1Ak=]
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>endpoint = XXX.XXX.XXX.XXX:51820
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>allowed-ips=0.0.0.0/0;
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>persistent-keepalive=25
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>__EOF__&#34;</span>
+</span></span><span style=display:flex><span>sudo nmcli connection load /etc/NetworkManager/system-connections/wireguard-client.nmconnection
+</span></span><span style=display:flex><span>sudo nmcli connection up wireguard-client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 公開鍵の確認</span>
+</span></span><span style=display:flex><span>$ sudo wg show wg0 public-key
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DFMfpLSzIowUt5xt7Rq7UnFRd9i0b2MCBlqPu4FoQX4</span><span style=color:#ff7b72;font-weight:700>=</span>
+</span></span></code></pre></div><p>ノートPCの WireGuard インタフェースをサーバ側の Peer として追加する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>sudo sh -c <span style=color:#a5d6ff>&#34;cat &lt;&lt; __EOF__ &gt;&gt; /etc/NetworkManager/system-connections/wireguard-server.nmconnection
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>[wireguard-peer.DFMfpLSzIowUt5xt7Rq7UnFRd9i0b2MCBlqPu4FoQX4=]
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>allowed-ips=10.0.0.3/32;
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>__EOF__&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>sudo nmcli connection load /etc/NetworkManager/system-connections/wireguard-server.nmconnection
+</span></span><span style=display:flex><span>sudo nmcli connection up wireguard-server
+</span></span></code></pre></div><p>ということで Peer 設定まで済。</p><p>テザリング（インターネット）経由の WireGuard で通信できていることの証跡を取る方法が思いつかなかったのだが、
+一応ノートPCからも WireGuard インタフェースで通信できていることが確認できた。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo wg show
+</span></span><span style=display:flex><span>interface: wg0
+</span></span><span style=display:flex><span>  public key: <span style=color:#79c0ff>DFMfpLSzIowUt5xt7Rq7UnFRd9i0b2MCBlqPu4FoQX4</span><span style=color:#ff7b72;font-weight:700>=</span>
+</span></span><span style=display:flex><span>  private key: <span style=color:#ff7b72;font-weight:700>(</span>hidden<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>  listening port: <span style=color:#a5d6ff>51820</span>
+</span></span><span style=display:flex><span>  fwmark: 0xcae7
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>peer: aaX+7NP+w93BL08NyiazchFwUKmEaLFMQLhpBdhK1Ak<span style=color:#ff7b72;font-weight:700>=</span>
+</span></span><span style=display:flex><span>  endpoint: XXX.XXX.XXX.XXX:51820
+</span></span><span style=display:flex><span>  allowed ips: 0.0.0.0/0
+</span></span><span style=display:flex><span>  latest handshake: <span style=color:#a5d6ff>13</span> seconds ago
+</span></span><span style=display:flex><span>  transfer: 70.43 KiB received, 69.34 KiB sent
+</span></span><span style=display:flex><span>  persistent keepalive: every <span style=color:#a5d6ff>25</span> seconds
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ ip route get 8.8.8.8
+</span></span><span style=display:flex><span>8.8.8.8 dev wg0 table <span style=color:#a5d6ff>51943</span> src 10.0.0.3 uid <span style=color:#a5d6ff>1002</span>
+</span></span><span style=display:flex><span>    cache
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ traceroute 8.8.8.8
+</span></span><span style=display:flex><span>traceroute to 8.8.8.8 <span style=color:#ff7b72;font-weight:700>(</span>8.8.8.8<span style=color:#ff7b72;font-weight:700>)</span>, <span style=color:#a5d6ff>30</span> hops max, <span style=color:#a5d6ff>60</span> byte packets
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>1</span>  10.0.0.1 <span style=color:#ff7b72;font-weight:700>(</span>10.0.0.1<span style=color:#ff7b72;font-weight:700>)</span>  60.104 ms  60.030 ms  60.027 ms
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>2</span>  192.168.2.1 <span style=color:#ff7b72;font-weight:700>(</span>192.168.2.1<span style=color:#ff7b72;font-weight:700>)</span>  59.974 ms  59.943 ms  59.918 ms
+</span></span><span style=display:flex><span> <span style=color:#a5d6ff>3</span>  192.168.1.1 <span style=color:#ff7b72;font-weight:700>(</span>192.168.1.1<span style=color:#ff7b72;font-weight:700>)</span>  59.894 ms  59.863 ms  59.824 ms
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>中略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>10</span>  dns.google <span style=color:#ff7b72;font-weight:700>(</span>8.8.8.8<span style=color:#ff7b72;font-weight:700>)</span>  66.980 ms  66.875 ms  66.842 ms
+</span></span></code></pre></div><p>あとシステムトレイの NetworkManager のアプレットからこんな感じで接続切断できる。</p><figure><a href=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/laptop-networkmanager-applet.png target=_self><img src=/archives/2023/02/12/configure-wireguard-based-on-nmcli/images/laptop-networkmanager-applet_hu78de123e65b266951a13190ec78439f9_60896_400x400_fit_box_3.png alt=システムトレイでの接続切断></a></figure><h2 id=終わりに>終わりに</h2><p>触ってみるまで WireGuard 公式のトップに書いている
+「WireGuard は専用インタフェースを使って透過的に通信を行う」というのがあんまりイメージ付いていなかったのだが、
+何となくイメージ付いた気がする。<br>（「OpenVPN とか L2TP/IPSec でも VPN 接続を確立した後は特に存在意識せず通信できるよな」と思い、それとどう違うのかピンと来てなかった）</p><p>実際に触ってみると</p><ul><li>Peer 相手と通信できるかどうかと WireGuard の有効無効が別<ul><li>例えばノートPCのとかで WireGuard 通信を実際に運んでいる Wi-Fi が切れたりしても WireGuard インタフェースの状態には影響しない<ul><li>もちろん通信はできなくなるが、 Wi-Fi が再度繋がった後で再度 VPN 通信しようとすればそのまま通信できる</li><li>OpenVPN とかの VPN だとサーバとの接続が切れたら再接続の必要が出てくるが、そういう操作が必要無い</li></ul></li><li>通信しようとしたときに通信できれば通信できるし、通信できない状態ならできない<ul><li>有線インタフェースで通信するのと似たような感覚</li></ul></li></ul></li></ul><p>という感じで、最初に WireGuard のインタフェースと Peer の設定さえしてしまえば、
+使うタイミングでも WireGuard の一切の操作（接続切断といった操作すら）無く使えるということなのかなと理解できた。</p><p>こういう事を考えると OpenVPN や L2TP/IPSec みたいに使おうと思ったときに接続するような使い方ではなくて、
+WireGuard インタフェースは常時上げておく使い方が基本なんだろうな、というのを感じた。
+（記事内で書いた様に、使いたい時に繋ぐという使い方ももちろんできなくは無いが）</p><p>同じ VPN ってことで OpenVPN や L2TP/IPSec と同じようなものと思っていたが、
+考え方が結構違いそうだなというのを実感できた。</p><h2 id=やり残したこと等>やり残したこと等</h2><p>最後にやり残したこと等を書き残しておく。</p><ul><li>WireGuard自体についてのまとめ<ul><li>今回はもともと作業内容に重点を置くということで省いたが、自分の理解を確認・整理する意味でもう少し詳しくまとめたい</li></ul></li><li>事前共有鍵の利用の検討<ul><li>下調べしていた段階で一旦無しで良いかと判断したが、セキュリティを担保している理屈とかをちゃんと理解したら改めて検討したい</li></ul></li><li>WireGuard の設定方法の比較<ul><li>今回使った nmci を使った設定と、 ip や wg-quick を使った場合との比較（主に設定管理とかの面）</li><li>他の方の記事見た感じ wg-quick を使った方がシンプルに設定できそうという気もしている</li></ul></li><li>ファイアウォールの設定について<ul><li>とりあえずで設定した感じで、あんまりちゃんと考えたものでは無い</li><li>NetworkManager dispatcher で nftables 使って制御している部分も割とできるようにやった感がある</li><li>仕組みだったりベストプラクティスだったりを学んだほうが良い気がしている</li></ul></li><li>IPv6 対応<ul><li>自宅のネットワークをほぼ IPv4 オンリーで構築していて、今回も IPv6 をほぼ考慮せず設定している</li><li>必要に迫られてないというのはあるが、ずっと「IPv6 かぁ」と言ってる気がするのでいい加減考えたい</li></ul></li><li>インターネット越しでのサーバ指定がグローバルIP直指定の部分<ul><li>ほとんど無いとはいえ一応変わり得るものなので、 DDNS 使うなり、変わったことを検知して通知するなりするしても良い気はしている</li></ul></li><li>そもそもの構成がどうかという点<ul><li>自宅に有るサーバをポートフォワード経由で公開する方法取ったが、VPS とかを中継して繋ぐ構成の方が良い気もしている（金はかかるが）</li></ul></li></ul><p>ある程度こうするのが良いかなというイメージができているものもあるが、
+微妙感はありつつじゃあ具体的にどうすれば良いかまではイメージできてないものもある。</p><p>この辺りは気が向いたら追々考えたい。</p><h2 id=参考>参考</h2><ul><li><a href=https://www.wireguard.com/>WireGuard: fast, modern, secure VPN tunnel</a></li><li><a href=https://wiki.nftables.org/wiki-nftables/index.php/Main_Page>nftables wiki</a></li><li><a href=https://access.redhat.com/documentation/ja-jp/red_hat_enterprise_linux/9/html/configuring_and_managing_networking/assembly_setting-up-a-wireguard-vpn_configuring-and-managing-networking>第10章 WireGuard VPN の設定 Red Hat Enterprise Linux 9 | Red Hat Customer Portal</a></li><li><a href="https://www.infrastudy.com/?p=1065">WireGuardのAllowed IPsの設定についての補足 | ネットワークとともに</a></li><li><a href=https://zenn.dev/hiroe_orz17/articles/f8f35075dea4cf>WireGuard概要まとめ</a></li><li><a href=https://wiki.archlinux.jp/index.php/NetworkManager>NetworkManager - ArchWiki</a></li><li><a href=https://knowledge.sakura.ad.jp/22636/>Linuxにおける新たなパケットフィルタリングツール「nftables」入門 | さくらのナレッジ</a></li><li><a href=https://zenn.dev/phoepsilonix/articles/232e01956be151>メモ: WireguardでのVPN(nftables)</a></li></ul><div class=footnotes role=doc-endnotes><hr><ol><li id=fn:1><p>本来 WireGuard でサーバ、クライアントといった役割は無いはずなので表現として適切で無い気はするが、便宜上サーバマシンを WireGuard サーバ、デスクトップPC・ノートPC・スマートフォンを WireGuard クライアントと呼んでいる。&#160;<a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li></ol></div></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_group title"><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>nmcli を用いた WireGuard の設定</dd></div></div><div class="article_meta_group timestamp"><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2023-02-12T12:30:25+09:00>2023-02-12</time></dd></div><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_reload"><span>Modified</span></dt><dd class=article_meta_value><time class=modified_date itemprop=dateModified datetime=2023-02-15T11:40:49+09:00>2023-02-15</time></dd></div></div><div class="article_meta_group taxonomy"><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/linux/>Linux</a></li><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/vpn/>VPN</a></li></ul></dd></div></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#wireguard-について>WireGuard について</a></li><li><a href=#全体図>全体図</a></li><li><a href=#設定作業>設定作業</a><ul><li><a href=#wireguard-インタフェースの作成>WireGuard インタフェースの作成</a></li><li><a href=#wireguard-peer-の設定>WireGuard Peer の設定</a></li><li><a href=#サーバでの転送設定>サーバでの転送設定</a></li><li><a href=#ルータでのポートフォワード設定>ルータでのポートフォワード設定</a></li><li><a href=#接続確認>接続確認</a></li></ul></li><li><a href=#終わりに>終わりに</a></li><li><a href=#やり残したこと等>やり残したこと等</a></li><li><a href=#参考>参考</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>

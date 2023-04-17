@@ -1,0 +1,149 @@
+<!doctype html><html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>Hugo のテーマ自作ことはじめ - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="Hugo のテーマを自作するにあたって、前準備としてやったことをまとめる。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="Hugo のテーマ自作ことはじめ"><meta property="og:description" content="Hugo のテーマを自作するにあたって、前準備としてやったことをまとめる。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2023/03/02/create-a-hugo-theme/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2023-03-02T16:53:06+09:00"><meta property="article:modified_time" content="2023-03-16T21:57:25+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/about/>About</a></li></ul></nav></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title>Hugo のテーマ自作ことはじめ</h1></header><section class=article_body><p>Hugo のテーマを自作するにあたって、前準備としてやったことをまとめる。</p><p>Hugo でブログを始めてから公式サイトに載っているテーマの一つの <a href=https://mainroad-demo.netlify.app/>Mainroad</a> を使っていたが、
+見出しの階層がわかりにくかったり（本文の装飾がシンプルで <code>&lt;h2></code> と <code>&lt;h3></code> の判別が難しい）、
+メインコンテンツ部分の幅が狭かったり（コードブロックですぐにスクロール必要になるのが微妙）と、
+いくつか気になる部分が出てきていた。</p><p>今のテーマに手を加える手もあったが、
+以前からいつかは自作のテーマ使いたいとは思っていたのと、
+他の方のブログを色々見る中で自作したい欲も強くなってきていたので自作する事にした。</p><p>ということで自分が何処から手を付けていったかとかをまとめておく。</p><h2 id=テーマファイルの雛形を作成する>テーマファイルの雛形を作成する</h2><p>実際に Hugo のテーマを作っていく前に、
+サンプルサイトの準備と雛形を用意する。</p><p>テーマを作るなら、確認のためにある程度のコンテンツを持ったサイトが必要になるが、
+Hugo がサンプルサイト（ <a href=https://github.com/gohugoio/hugoBasicExample>gohugoio/hugoBasicExample: Example site to use with Hugo & Hugo Themes</a> ）を用意してくれているので、
+今回はこれを使う。</p><p>既にこのブログでいくつか記事を書いているので、そのリポジトリでブランチ切って作っていくでも良い気はしたが、
+別のテーマ用に行っている設定とごっちゃになって何かにハマりそうな気がしたため一旦公式サンプルサイトを使うことにした。</p><p>ということでサンプルサイトを clone してくる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ git clone https://github.com/gohugoio/hugoBasicExample.git
+</span></span><span style=display:flex><span>$ cd hugoBasicExample
+</span></span></code></pre></div><p>次に hugo コマンドの中にテーマの雛形作成用のサブコマンド（ <code>hugo new theme &lt;theme-name></code> ）が有るのでそれを実行する。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ hugo new theme hugo-theme
+</span></span></code></pre></div><p>すると <code>themes</code> ディレクトリにこんな感じの雛形が作成される。
+Hugo はこの中のテンプレート（ <code>.html</code> なファイル）を参照して実際の HTML を生成するので、
+テーマを自作する際はこれらのファイルを弄っていくことになる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ tree -A themes/
+</span></span><span style=display:flex><span>themes/
+</span></span><span style=display:flex><span>└── hugo-theme
+</span></span><span style=display:flex><span>    ├── archetypes
+</span></span><span style=display:flex><span>    │   └── default.md
+</span></span><span style=display:flex><span>    ├── layouts
+</span></span><span style=display:flex><span>    │   ├── 404.html
+</span></span><span style=display:flex><span>    │   ├── _default
+</span></span><span style=display:flex><span>    │   │   ├── baseof.html
+</span></span><span style=display:flex><span>    │   │   ├── list.html
+</span></span><span style=display:flex><span>    │   │   └── single.html
+</span></span><span style=display:flex><span>    │   ├── index.html
+</span></span><span style=display:flex><span>    │   └── partials
+</span></span><span style=display:flex><span>    │       ├── footer.html
+</span></span><span style=display:flex><span>    │       ├── header.html
+</span></span><span style=display:flex><span>    │       └── head.html
+</span></span><span style=display:flex><span>    ├── LICENSE
+</span></span><span style=display:flex><span>    ├── static
+</span></span><span style=display:flex><span>    │   ├── css
+</span></span><span style=display:flex><span>    │   └── js
+</span></span><span style=display:flex><span>    └── theme.toml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>9</span> directories, <span style=color:#a5d6ff>11</span> files
+</span></span></code></pre></div><p>あと、自分は最終的に submodule の形でサイトに反映するつもりなので、このタイミングで <code>git init</code> と GitHub でのリポジトリ作成もやっておく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cd theme/hugo-theme
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ echo <span style=color:#a5d6ff>&#39;# hugo-theme&#39;</span> &gt;&gt; README.md
+</span></span><span style=display:flex><span>$ git init
+</span></span><span style=display:flex><span>$ git add .
+</span></span><span style=display:flex><span>$ git commit -m <span style=color:#a5d6ff>&#39;init&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ gh repo create hugo-theme --public
+</span></span><span style=display:flex><span>$ git remote add origin git@github.com:goshida/hugo-theme.git
+</span></span><span style=display:flex><span>$ git push origin main
+</span></span></code></pre></div><h2 id=サンプルをコピーして最低限サイトを見れる状態にする>サンプルをコピーして最低限サイトを見れる状態にする</h2><p>前述の <code>hugo new theme &lt;theme-name></code> で生成した雛形だが、
+ほぼ空ファイルなため、この状態で <code>hugo server -D -t &lt;theme-name></code> とかでローカルサーバを起動してもコンテンツは見れない。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ find . -type f | grep -v <span style=color:#a5d6ff>&#39;/.git&#39;</span> | xargs ls -lh
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>8</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./archetypes/default.md
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/404.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida  <span style=color:#a5d6ff>250</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/_default/baseof.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/_default/list.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/_default/single.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/index.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/partials/footer.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/partials/header.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida    <span style=color:#a5d6ff>0</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./layouts/partials/head.html
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 1.1K Feb <span style=color:#a5d6ff>22</span> 10:13 ./LICENSE
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida   <span style=color:#a5d6ff>13</span> Feb <span style=color:#a5d6ff>22</span> 13:01 ./README.md
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida  <span style=color:#a5d6ff>438</span> Feb <span style=color:#a5d6ff>22</span> 10:13 ./theme.toml
+</span></span></code></pre></div><figure><a href=/archives/2023/03/02/create-a-hugo-theme/images/new-theme.png target=_self><img src=/archives/2023/03/02/create-a-hugo-theme/images/new-theme_hud9d9561bd7d8d295c651695588bd673c_22019_400x400_fit_box_3.png alt=生成した雛形そのままでの生成結果></a><figcaption>生成した雛形そのままでサーバを起動した様子</figcaption></figure><p>なので、まず最低限サイトを回れる様にしていく。</p><p>中身の細かい理解はひとまず置いといて、
+Hugo のドキュメントにサンプルテンプレートが色々あるので、以下のような感じでコピーしてくる。</p><ul><li>layouts/_default/list.html<ul><li>セクションページ等の記事一覧で使われるテンプレート</li><li><a href=https://gohugo.io/templates/lists/#example-project-directory>Lists of Content in Hugo | Hugo</a></li></ul></li></ul><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=display:flex><span>{{ define &#34;main&#34; }}
+</span></span><span style=display:flex><span>&lt;<span style=color:#7ee787>main</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>article</span>&gt;
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>header</span>&gt;
+</span></span><span style=display:flex><span>            &lt;<span style=color:#7ee787>h1</span>&gt;{{.Title}}&lt;/<span style=color:#7ee787>h1</span>&gt;
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>header</span>&gt;
+</span></span><span style=display:flex><span>        <span style=color:#8b949e;font-style:italic>&lt;!-- &#34;{{.Content}}&#34; pulls from the markdown content of the corresponding _index.md --&gt;</span>
+</span></span><span style=display:flex><span>        {{.Content}}
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>article</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>ul</span>&gt;
+</span></span><span style=display:flex><span>    <span style=color:#8b949e;font-style:italic>&lt;!-- Ranges through content/posts/*.md --&gt;</span>
+</span></span><span style=display:flex><span>    {{ range .Pages }}
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>            &lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{.Permalink}}&#34;</span>&gt;{{.Date.Format &#34;2006-01-02&#34;}} | {{.Title}}&lt;/<span style=color:#7ee787>a</span>&gt;
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>    {{ end }}
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>ul</span>&gt;
+</span></span><span style=display:flex><span>&lt;/<span style=color:#7ee787>main</span>&gt;
+</span></span><span style=display:flex><span>{{ end }}
+</span></span></code></pre></div><ul><li>layouts/_default/single.html<ul><li>個別の記事ページで使われるテンプレート</li><li><a href=https://gohugo.io/templates/single-page-templates/#example-single-page-templates>Single Page Templates | Hugo</a></li></ul></li></ul><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=display:flex><span>{{ define &#34;main&#34; }}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;<span style=color:#7ee787>section</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;main&#34;</span>&gt;
+</span></span><span style=display:flex><span>  &lt;<span style=color:#7ee787>h1</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;title&#34;</span>&gt;{{ .Title }}&lt;/<span style=color:#7ee787>h1</span>&gt;
+</span></span><span style=display:flex><span>  &lt;<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>article</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;content&#34;</span>&gt;
+</span></span><span style=display:flex><span>           {{ .Content }}
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>article</span>&gt;
+</span></span><span style=display:flex><span>  &lt;/<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>&lt;/<span style=color:#7ee787>section</span>&gt;
+</span></span><span style=display:flex><span>&lt;<span style=color:#7ee787>aside</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;meta&#34;</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>section</span>&gt;
+</span></span><span style=display:flex><span>      &lt;<span style=color:#7ee787>h4</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;date&#34;</span>&gt; {{ .Date.Format &#34;Mon Jan 2, 2006&#34; }} &lt;/<span style=color:#7ee787>h4</span>&gt;
+</span></span><span style=display:flex><span>      &lt;<span style=color:#7ee787>h5</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;wordcount&#34;</span>&gt; {{ .WordCount }} Words &lt;/<span style=color:#7ee787>h5</span>&gt;
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>section</span>&gt;
+</span></span><span style=display:flex><span>      {{ with .GetTerms &#34;topics&#34; }}
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>ul</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;topics&#34;</span>&gt;
+</span></span><span style=display:flex><span>          {{ range . }}
+</span></span><span style=display:flex><span>            &lt;<span style=color:#7ee787>li</span>&gt;&lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ .RelPermalink }}&#34;</span>&gt;{{ .LinkTitle }}&lt;/<span style=color:#7ee787>a</span>&gt;&lt;/<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>          {{ end }}
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>ul</span>&gt;
+</span></span><span style=display:flex><span>      {{ end }}
+</span></span><span style=display:flex><span>      {{ with .GetTerms &#34;tags&#34; }}
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>ul</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;tags&#34;</span>&gt;
+</span></span><span style=display:flex><span>          {{ range . }}
+</span></span><span style=display:flex><span>            &lt;<span style=color:#7ee787>li</span>&gt;&lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ .RelPermalink }}&#34;</span>&gt;{{ .LinkTitle }}&lt;/<span style=color:#7ee787>a</span>&gt;&lt;/<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>          {{ end }}
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>ul</span>&gt;
+</span></span><span style=display:flex><span>      {{ end }}
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>        {{ with .PrevInSection }}
+</span></span><span style=display:flex><span>          &lt;<span style=color:#7ee787>a</span> class<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;previous&#34;</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{.Permalink}}&#34;</span>&gt; {{.Title}}&lt;/<span style=color:#7ee787>a</span>&gt;
+</span></span><span style=display:flex><span>        {{ end }}
+</span></span><span style=display:flex><span>        {{ with .NextInSection }}
+</span></span><span style=display:flex><span>          &lt;<span style=color:#7ee787>a</span> class<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;next&#34;</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{.Permalink}}&#34;</span>&gt; {{.Title}}&lt;/<span style=color:#7ee787>a</span>&gt;
+</span></span><span style=display:flex><span>        {{ end }}
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>&lt;/<span style=color:#7ee787>aside</span>&gt;
+</span></span><span style=display:flex><span>{{ end }}
+</span></span></code></pre></div><ul><li>layouts/index.html<ul><li>ホームページで使われるテンプレート</li><li>ブログだと単純化のため削除してしまって <code>layouts/_default/list.html</code> を使う様にしている人も多いっぽい<ul><li>自分は記事リストへのリンクが欲しかったので一旦残した</li></ul></li><li><a href=https://gohugo.io/templates/taxonomy-templates/#displaying-custom-metadata-in-taxonomy-terms-templates>Taxonomy Templates | Hugo</a></li></ul></li></ul><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=display:flex><span>&lt;<span style=color:#7ee787>ul</span>&gt;
+</span></span><span style=display:flex><span>    {{ range .Pages }}
+</span></span><span style=display:flex><span>        &lt;<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>            &lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ .Permalink }}&#34;</span>&gt;{{ .Title }}&lt;/<span style=color:#7ee787>a</span>&gt;
+</span></span><span style=display:flex><span>            {{ .Params.wikipedia }}
+</span></span><span style=display:flex><span>        &lt;/<span style=color:#7ee787>li</span>&gt;
+</span></span><span style=display:flex><span>    {{ end }}
+</span></span><span style=display:flex><span>&lt;/<span style=color:#7ee787>ul</span>&gt;
+</span></span></code></pre></div><ul><li>layouts/404.html<ul><li>エラーページ用のサンプル</li><li><a href=https://gohugo.io/templates/404/#404html>Custom 404 Page | Hugo</a></li></ul></li></ul><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=display:flex><span>{{ define &#34;main&#34;}}
+</span></span><span style=display:flex><span>    &lt;<span style=color:#7ee787>main</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;main&#34;</span>&gt;
+</span></span><span style=display:flex><span>      &lt;<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>       &lt;<span style=color:#7ee787>h1</span> id<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;title&#34;</span>&gt;&lt;<span style=color:#7ee787>a</span> href<span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;{{ &#34;</span><span style=color:#f85149>&#34;</span> <span style=color:#f85149>|</span> relURL <span style=color:#f85149>}}&#34;</span>&gt;Go Home&lt;/<span style=color:#7ee787>a</span>&gt;&lt;/<span style=color:#7ee787>h1</span>&gt;
+</span></span><span style=display:flex><span>      &lt;/<span style=color:#7ee787>div</span>&gt;
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#7ee787>main</span>&gt;
+</span></span><span style=display:flex><span>{{ end }}
+</span></span></code></pre></div><p>コピーが終わったら改めてサーバを起動してブラウザから見ると、
+以下の様な感じで最低限リンクを踏んで個別の記事まで辿り付けるようになる。</p><figure><a href=/archives/2023/03/02/create-a-hugo-theme/images/top.png target=_self><img src=/archives/2023/03/02/create-a-hugo-theme/images/top_hu3d0b2f9658c73af6f5087b3973ee3b55_19417_400x400_fit_box_3.png alt=トップページの生成結果></a><figcaption>サイトのトップページ</figcaption></figure><figure><a href=/archives/2023/03/02/create-a-hugo-theme/images/list.png target=_self><img src=/archives/2023/03/02/create-a-hugo-theme/images/list_hu70d5611ef9a84b4da1d5235672cd8554_39018_400x400_fit_box_3.png alt=記事一覧ページの生成結果></a><figcaption>post セクションの記事一覧（トップページから Posts のリンク先）</figcaption></figure><figure><a href=/archives/2023/03/02/create-a-hugo-theme/images/single.png target=_self><img src=/archives/2023/03/02/create-a-hugo-theme/images/single_hua686c1ba6716529c98bc67e51da1d493_117469_400x400_fit_box_3.png alt=個別記事ページの生成結果></a><figcaption>個別の記事ページ</figcaption></figure><figure><a href=/archives/2023/03/02/create-a-hugo-theme/images/404.png target=_self><img src=/archives/2023/03/02/create-a-hugo-theme/images/404_hu6409c7b99682d54777f15f244561b5ad_22890_400x400_fit_box_3.png alt=404ページの生成結果></a><figcaption>404ページ（適当な URL ）</figcaption></figure><h2 id=テンプレートと生成されるhtmlの関係を把握する>テンプレートと生成されるHTMLの関係を把握する</h2><p>最低限サイトを回れる様にはなったので、
+テンプレートと実際に生成されたサイト、公式のドキュメントを見つつ Hugo がどのテンプレートを参照して、
+ページを生成しているかを把握する。</p><p>生成の基本的なルールについては公式ドキュメントの以下ページにまとまっている。</p><ul><li><a href=https://gohugo.io/templates/lookup-order/>Hugo&rsquo;s Lookup Order | Hugo</a></li></ul><p>そこまで複雑なものでも無いが、以下のような感じで見ていくと追いやすかった。</p><ul><li>Hugo がページを生成する際は最初に <code>baseof.html</code> を参照する<ul><li><code>{{ block &lt;hoge> }}</code> が出てきたら、対応する定義 <code>{{ define &lt;hoge> }}</code> をテンプレートの中から探す<ul><li>定義探す際に、生成するページの種類に応じてどのファイルをどういった順番で見ていくかを書いているのが上のドキュメント</li><li>テンプレートを弄る際は基本的には優先度の低い <code>_default</code> の中を弄って、個別（ホームページ、特定のセクション下、等）で何かをしたくなったら上の階層もしくは別ディレクトリに同名ファイルを作ってオーバーライドする感じ</li></ul></li><li><code>{{ partial &lt;fuga>.html }}</code> が出てきたら <code>layouts/partials/&lt;fuga>.html</code> の中身で置き換える</li></ul></li></ul><p>また、サンプルテンプレート内で使われている各種関数や変数に関してもドキュメントにまとまっているので、
+その辺を参照しつつテンプレート読んでいけば、基本的な書き方は把握できると思う。</p><ul><li><a href=https://gohugo.io/functions/>Functions Quick Reference | Hugo</a></li><li><a href=https://gohugo.io/variables/>Variables and Params | Hugo</a></li></ul><p>サンプルテンプレートが理解できたら、大まかなサイトのデザインをざっくり決めて、あとは弄りながら理解を深めていく。</p><h2 id=おわりに>おわりに</h2><p>ということで、 Hugo のテーマを作っていくにあたって、最低限の下準備はできた。</p><p>この後実際に HTML やら CSS やらを弄っていくのだが、
+ある程度ちゃんとしたテーマを目指すなら、気を付ける事や最低限実装すべきものも把握する必要がありそう。</p><ul><li><a href=https://blog.unresolved.xyz/how-to-make-of-hugo-theme>Hugoのテーマを何個か作ったので知見をまとめてみる - blog.unresolved.xyz</a></li></ul><p>ただ、公式のガイドラインやベストプラクティスみたいなものは見つけられなかったので、
+こういった先人の記事や既に公開されているテーマ等を参考にしつつ、実際に作りながら身につけていくしかなさそう。
+この辺はテーマがある程度形になったタイミングで自分でも振り返ってまとめてみたい。</p><p>なるべく早く形にしたいとは思っているものの、
+HTML も10年くらい触ってなく何も覚えてないので、
+今使っているテーマから自作テーマに置き換えられるのはいつ頃になるだろうか、という感じではある。</p><h2 id=参考>参考</h2><ul><li><a href=https://gohugo.io/documentation/>Hugo Documentation | Hugo</a></li><li><a href=https://m1yam0t0.com/posts/2022/09/renew-hugo-theme/>Hugo のテーマを自作した – m1yam0t0.com</a></li><li><a href=https://blog.unresolved.xyz/how-to-make-of-hugo-theme>Hugoのテーマを何個か作ったので知見をまとめてみる - blog.unresolved.xyz</a></li></ul></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_group title"><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>Hugo のテーマ自作ことはじめ</dd></div></div><div class="article_meta_group timestamp"><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2023-03-02T16:53:06+09:00>2023-03-02</time></dd></div><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_reload"><span>Modified</span></dt><dd class=article_meta_value><time class=modified_date itemprop=dateModified datetime=2023-03-16T21:57:25+09:00>2023-03-16</time></dd></div></div><div class="article_meta_group taxonomy"><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/hugo/>Hugo</a></li></ul></dd></div></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#テーマファイルの雛形を作成する>テーマファイルの雛形を作成する</a></li><li><a href=#サンプルをコピーして最低限サイトを見れる状態にする>サンプルをコピーして最低限サイトを見れる状態にする</a></li><li><a href=#テンプレートと生成されるhtmlの関係を把握する>テンプレートと生成されるHTMLの関係を把握する</a></li><li><a href=#おわりに>おわりに</a></li><li><a href=#参考>参考</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>

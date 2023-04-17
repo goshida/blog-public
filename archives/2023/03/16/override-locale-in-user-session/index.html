@@ -1,0 +1,169 @@
+<!doctype html><html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>ユーザセッションでロケールを変更する - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="Linux でロケールとユーザディレクトリの設定を行う。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="ユーザセッションでロケールを変更する"><meta property="og:description" content="Linux でロケールとユーザディレクトリの設定を行う。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2023/03/16/override-locale-in-user-session/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2023-03-16T19:03:53+09:00"><meta property="article:modified_time" content="2023-03-16T19:03:53+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/about/>About</a></li></ul></nav></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title>ユーザセッションでロケールを変更する</h1></header><section class=article_body><p>Linux でロケールとユーザディレクトリの設定を行う。</p><p>普段使っている Linux マシンのロケールとして <code>en_US.UTF-8</code> を設定していたのだが、
+<code>ja_JP.UTF-8</code> に変えたのでその記録。</p><h2 id=背景>背景</h2><p>一応ロケール設定を変えようと思った背景について触れておく。</p><p>そもそもなんで <code>en_US.UTF-8</code> を使っていたのかという部分だが、以下2つが主な理由。</p><ul><li>最初に ArchLinux を使い初めた頃日本語化まわりでのトラブルを避けたくて英語にしたのを引きずっていた</li><li>ホームディレクトリにある各種ユーザディレクトリ（ <code>Downloads</code> とか <code>Desktop</code> とか）を英語にしておきたかった</li></ul><p>副作用としてデスクトップ環境やウェブブラウザ等のあらゆるソフトウェアの言語設定も英語になっていたが、
+それほど困っていなかったのでしばらくそのままで使っていた。</p><p>ただ、しばらく使ってるとやっぱり日本語にしたいと思うことが増えてきた。</p><ul><li>ブラウザの言語設定を参照して、コンテンツが全部英語になるサイトが結構ある<ul><li>メニュー等の単語熟語程度ならともかく、文章だと Deepl とか英和時点のお世話になることも多いので読むのに時間かかる</li><li>最初は英語の勉強にもなるし良いかとも思ってたがやっぱり面倒になってきた</li></ul></li><li>GIMP とか慣れてないソフトは日本語の解説記事とかを見ながら操作することも多いので日本語の方が楽<ul><li>解説記事内の日本語項目に対応するものを英語で探して「どれやねん」となることがぼちぼちあった</li></ul></li><li>やっぱり英語より日本語の方がパッと見たときの視認性が高い<ul><li>単純に自分の英語力が足りてないんだろうという気はする</li></ul></li></ul><p>また、ArchLinux をしばらく使って慣れてきたこともあって、最初に英語ロケールにしておく必要性も薄れてきていた。</p><ul><li>日本語関連で面倒な事にはそうそうなることなさそうという感覚になった<ul><li>仮に何かあっても解決できるだろうという自信が付いたのもある</li></ul></li><li>ユーザディレクトリの名前もロケール設定とは別で制御できると分かったこと</li></ul><p>ということで今回の作業に至る。</p><h2 id=設定作業>設定作業</h2><p>作業としては、ユーザディレクトリの設定をした上でロケールの設定を変えるという順番でやる。</p><p>最終的に以下のような状態にする。</p><ul><li>ロケール<ul><li>システムロケールは英語を維持</li><li>ユーザロケールは日本語に変更</li></ul></li><li>ユーザディレクトリ<ul><li>ディレクトリ名は英語を維持</li></ul></li></ul><p>基本的には今の状態を維持しつつ、ユーザロケールだけ日本語に変える感じ。</p><p>システムログとかはググるときに日本語より英語でググったほうが情報多そうな気がするので、
+システムロケールは英語を維持することにした。</p><h3 id=ユーザディレクトリの設定>ユーザディレクトリの設定</h3><p>まずはユーザディレクトリの名前を英語に固定する方から。</p><p>設定については freedesktop.org の wiki と、例によって ArchWiki のお世話になった。</p><ul><li><a href=https://www.freedesktop.org/wiki/Software/xdg-user-dirs/>xdg-user-dirs</a></li><li><a href=https://wiki.archlinux.jp/index.php/XDG_%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA>XDG ユーザーディレクトリ - ArchWiki</a></li></ul><p>ユーザディレクトリの管理には ArchWiki に書いてる様に xdg-user-dirs パッケージを使う事もできるが、
+このツールはあくまで設定を生成したりローカライズを助けるためのモノなので使わなくても設定はできる。</p><p>（というより、自分の場合事前にディレクトリを一式作らせたくなくて、
+その場合 xdg-user-dirs を使うと追加で設定が必要になってくるので使わない。この辺は後述）</p><p>freedesktop.org の仕様に沿うソフトウェアであれば、
+各種ユーザディレクトリが必要になった場合 <code>${XDG_CONFIG_HOME}/user-dirs.dirs</code> を参照するので、
+単純にこれを作れば良い。</p><p>今回の様に英語ロケールでのデフォルト設定を維持したいのであればこんな感じ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#79c0ff>XDG_DESKTOP_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Desktop&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_DOWNLOAD_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Downloads&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_TEMPLATES_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Templates&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_PUBLICSHARE_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Public&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_DOCUMENTS_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Documents&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_MUSIC_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Music&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_PICTURES_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Pictures&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>XDG_VIDEOS_DIR</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/Videos&#34;</span>
+</span></span></code></pre></div><p>一応ホントにこのファイルを参照しているかについては、
+XDG_DOWNLOAD_DIR の値を適当なものに弄ってみるのが手っ取り早い。
+ファイル編集後に適当なウェブブラウザで何かダウンロードリンク踏むと、
+ダウンロード先のディレクトリが変わるのが確認できるはず。（要ブラウザ再起動）</p><p>ファイルを一個作っただけではあるが、これでユーザディレクトリを英語名で固定することができる。</p><h3 id=ロケールの変更>ロケールの変更</h3><p>ユーザディレクトリを英語名で固定できたので、次にロケールの設定を変更する。</p><p>自分の場合 OS インストール時に以下ファイルを作成して、システムロケールを設定している。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/locale.conf
+</span></span><span style=display:flex><span><span style=color:#79c0ff>LANG</span><span style=color:#ff7b72;font-weight:700>=</span>en_US.UTF-8
+</span></span></code></pre></div><p>ユーザセッションで別のロケールを使いたい場合は、 <code>localegen</code> で使いたいロケールを生成した上で、
+<code>${XDG_CONFIG_HOME}/locale.conf</code> にファイルを作成することでシステムロケールを上書きできる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ grep -v <span style=color:#a5d6ff>&#39;^#&#39;</span> /etc/locale.gen
+</span></span><span style=display:flex><span>en_US.UTF-8 UTF-8
+</span></span><span style=display:flex><span>ja_JP.UTF-8 UTF-8
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ sudo locale-gen
+</span></span><span style=display:flex><span>Generating locales...
+</span></span><span style=display:flex><span>  en_US.UTF-8... <span style=color:#ff7b72>done</span>
+</span></span><span style=display:flex><span>    ja_JP.UTF-8... <span style=color:#ff7b72>done</span>
+</span></span><span style=display:flex><span>    Generation complete.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ locale -a
+</span></span><span style=display:flex><span>C
+</span></span><span style=display:flex><span>C.UTF-8
+</span></span><span style=display:flex><span>POSIX
+</span></span><span style=display:flex><span>en_US.utf8
+</span></span><span style=display:flex><span>ja_JP.utf8
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ echo <span style=color:#a5d6ff>&#39;LANG=ja_JP.UTF-8&#39;</span> &gt;&gt; ~/.config/locale.conf
+</span></span></code></pre></div><p>あと若干おま環気味なので詳細は後述するが、自分の環境ではこのファイルを読み込む処理を <code>.profile</code> に追記している。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat ~/.profile
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>if</span> <span style=color:#ff7b72;font-weight:700>[</span> -n <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span> <span style=color:#ff7b72;font-weight:700>&amp;&amp;</span> <span style=color:#ff7b72;font-weight:700>[</span> -r <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>/locale.conf&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>  . <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>/locale.conf&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>fi</span>
+</span></span></code></pre></div><p>そうすると再ログイン以降、メニューなどが日本語で表示されることが確認できる。</p><figure><a href=/archives/2023/03/16/override-locale-in-user-session/images/before.png target=_self><img src=/archives/2023/03/16/override-locale-in-user-session/images/before_hub060c243becd6bba814ec8d61c0a8ac8_23926_400x400_fit_box_3.png alt="ロケール変更前の Xfce メニュー"></a><figcaption>作業前</figcaption></figure><figure><a href=/archives/2023/03/16/override-locale-in-user-session/images/after.png target=_self><img src=/archives/2023/03/16/override-locale-in-user-session/images/after_hu4fb7c4394b51831784bee9f83887aee9_25965_400x400_fit_box_3.png alt="ロケール変更後の Xfce メニュー"></a><figcaption>作業後</figcaption></figure><h2 id=余談>余談</h2><h3 id=xdg-user-dirs-を使う場合について>xdg-user-dirs を使う場合について</h3><p>ユーザディレクトリの設定について、今回は使わないことにしたが
+xdg-user-dirs を使ったパターンでも試したのでその場合の設定についても残しておく。</p><p>必要に応じてパッケージをインストールする。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo pacman -S xdg-user-dirs
+</span></span></code></pre></div><p>すると <code>/etc/</code> にシステムのデフォルト設定もインストールされる。
+大した分量でも無いし、設定ファイルのコメントに必要なことは大体書いてる感じなので目を通しておくと良さげ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ pacman -Ql xdg-user-dirs | grep -v <span style=color:#a5d6ff>&#39;/$&#39;</span> | grep <span style=color:#a5d6ff>&#39;/etc/&#39;</span>
+</span></span><span style=display:flex><span>xdg-user-dirs /etc/xdg/user-dirs.conf
+</span></span><span style=display:flex><span>xdg-user-dirs /etc/xdg/user-dirs.defaults
+</span></span></code></pre></div><details><summary>一応自分がインストールした際(ver. 0.18-1 )の中身を貼っておく</summary><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/xdg/user-dirs.conf
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># This controls the behaviour of xdg-user-dirs-update which is run on user login</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># You can also have per-user config in ~/.config/user-dirs.conf, or specify</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># the XDG_CONFIG_HOME and/or XDG_CONFIG_DIRS to override this</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>enabled</span><span style=color:#ff7b72;font-weight:700>=</span>True
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># This sets the filename encoding to use. You can specify an explicit</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># encoding, or &#34;locale&#34; which means the encoding of the users locale</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># will be used</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>filename_encoding</span><span style=color:#ff7b72;font-weight:700>=</span>UTF-8
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/xdg/user-dirs.defaults
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># Default settings for user directories</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># The values are relative pathnames from the home directory and</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># will be translated on a per-path-element basis into the users locale</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DESKTOP</span><span style=color:#ff7b72;font-weight:700>=</span>Desktop
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DOWNLOAD</span><span style=color:#ff7b72;font-weight:700>=</span>Downloads
+</span></span><span style=display:flex><span><span style=color:#79c0ff>TEMPLATES</span><span style=color:#ff7b72;font-weight:700>=</span>Templates
+</span></span><span style=display:flex><span><span style=color:#79c0ff>PUBLICSHARE</span><span style=color:#ff7b72;font-weight:700>=</span>Public
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DOCUMENTS</span><span style=color:#ff7b72;font-weight:700>=</span>Documents
+</span></span><span style=display:flex><span><span style=color:#79c0ff>MUSIC</span><span style=color:#ff7b72;font-weight:700>=</span>Music
+</span></span><span style=display:flex><span><span style=color:#79c0ff>PICTURES</span><span style=color:#ff7b72;font-weight:700>=</span>Pictures
+</span></span><span style=display:flex><span><span style=color:#79c0ff>VIDEOS</span><span style=color:#ff7b72;font-weight:700>=</span>Videos
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># Another alternative is:</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#MUSIC=Documents/Music</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#PICTURES=Documents/Pictures</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#VIDEOS=Documents/Videos</span>
+</span></span></code></pre></div></details><br><p>ユーザディレクトリの指定としては xdg-user-dirs を使わない場合と同じような感じで、
+<code>${XDG_CONFIG_HOME}/user-dirs.dirs</code> にファイルを作成する。
+（xdg-user-dirs を使わないパターンと指定方法が若干違うが、絶対パス or ホームディレクトリからの相対パスでどっちでも良い）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#79c0ff>DESKTOP</span><span style=color:#ff7b72;font-weight:700>=</span>Desktop
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DOWNLOAD</span><span style=color:#ff7b72;font-weight:700>=</span>Downloads
+</span></span><span style=display:flex><span><span style=color:#79c0ff>TEMPLATES</span><span style=color:#ff7b72;font-weight:700>=</span>Templates
+</span></span><span style=display:flex><span><span style=color:#79c0ff>PUBLICSHARE</span><span style=color:#ff7b72;font-weight:700>=</span>Public
+</span></span><span style=display:flex><span><span style=color:#79c0ff>DOCUMENTS</span><span style=color:#ff7b72;font-weight:700>=</span>Documents
+</span></span><span style=display:flex><span><span style=color:#79c0ff>MUSIC</span><span style=color:#ff7b72;font-weight:700>=</span>Music
+</span></span><span style=display:flex><span><span style=color:#79c0ff>PICTURES</span><span style=color:#ff7b72;font-weight:700>=</span>Pictures
+</span></span><span style=display:flex><span><span style=color:#79c0ff>VIDEOS</span><span style=color:#ff7b72;font-weight:700>=</span>Videos
+</span></span></code></pre></div><p>また xdg-user-dirs は（少なくとも ArchLinux のパッケージの）デフォルト設定だと、
+ユーザログイン時に xdg-user-dirs-update を実行して各種ディレクトリがない場合自動で作成する設定になっている。
+自分の場合 <code>~/Public/</code> や <code>~/Templates/</code> 等の使わない空ディレクトリを作られたくないので、ログイン時に実行されない様にしておく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ sudo sed -i -e <span style=color:#a5d6ff>&#39;s/enabled=True/enabled=False/&#39;</span> /etc/xdg/user-dirs.conf
+</span></span></code></pre></div><p>という感じで、今回設定したのと同じ状態にできる。</p><p>実は先にこっちの方法で設定したのだが、
+インストールした上でわざわざ実行しない設定を足すくらいならインストール自体必要ないか、
+という事で最終的に xdg-user-dirs パッケージは使わないことにした。</p><h3 id=configlocaleconf-の読み込みタイミングについて>~/.config/locale.conf の読み込みタイミングについて</h3><p>ユーザセッションでのロケール設定について、最初は ArchWiki に書いてる通り単純に <code>~/.config/locale.conf</code> を作ったのだが、
+それだけだと反映されずなんでだろうかと調べていた。</p><p>若干腑に落ちきっていないところはあるのだが、
+結果から言うと systemd と自分が使っているディスプレイマネージャ（ lightdm ）のデフォルト設定との噛み合わせが悪そう、
+という感じだった。</p><p>まず lightdm ではセッションのラッパースクリプト内で <code>/etc/locale.conf</code> <code>~/.config/locale.conf</code> などを読み込んでいるのだが、
+デフォルトのスクリプトだと LANG 変数がセットされていない場合にのみ読み込むようになっている。</p><details><summary>若干冗長な気もするので畳むが、一応該当部分を貼っておく</summary><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/lightdm/lightdm.conf | grep -v -e <span style=color:#a5d6ff>&#39;^#&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>LightDM<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span><span style=display:flex><span>run-directory<span style=color:#ff7b72;font-weight:700>=</span>/run/lightdm
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>Seat:*<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span><span style=display:flex><span>session-wrapper<span style=color:#ff7b72;font-weight:700>=</span>/etc/lightdm/Xsession
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>XDMCPServer<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72;font-weight:700>[</span>VNCServer<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/lightdm/Xsession | grep -A6 -e <span style=color:#a5d6ff>&#34;Load profile&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># Load profile</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>for</span> file in <span style=color:#a5d6ff>&#34;/etc/profile&#34;</span> <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/.profile&#34;</span> <span style=color:#a5d6ff>&#34;/etc/xprofile&#34;</span> <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/.xprofile&#34;</span>; <span style=color:#ff7b72>do</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff7b72>if</span> <span style=color:#ff7b72;font-weight:700>[</span> -f <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$file</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>        echo <span style=color:#a5d6ff>&#34;Loading profile from </span><span style=color:#79c0ff>$file</span><span style=color:#a5d6ff>&#34;</span>;
+</span></span><span style=display:flex><span>        . <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$file</span><span style=color:#a5d6ff>&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff7b72>fi</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>done</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>cat /etc/profile | grep -A6 <span style=color:#a5d6ff>&#39;Load profiles&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># Load profiles from /etc/profile.d</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>if</span> test -d /etc/profile.d/; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff7b72>for</span> profile in /etc/profile.d/*.sh; <span style=color:#ff7b72>do</span>
+</span></span><span style=display:flex><span>                test -r <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$profile</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>&amp;&amp;</span> . <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$profile</span><span style=color:#a5d6ff>&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff7b72>done</span>
+</span></span><span style=display:flex><span>        unset profile
+</span></span><span style=display:flex><span><span style=color:#ff7b72>fi</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ cat /etc/profile.d/locale.sh
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic>#!/bin/sh</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># load locale.conf in XDG paths.</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># /etc/locale.conf loads and overrides by kernel command line is done by systemd</span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># But we override it here, see FS#56688</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>if</span> <span style=color:#ff7b72;font-weight:700>[</span> -z <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$LANG</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>if</span> <span style=color:#ff7b72;font-weight:700>[</span> -n <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span> <span style=color:#ff7b72;font-weight:700>&amp;&amp;</span> <span style=color:#ff7b72;font-weight:700>[</span> -r <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>/locale.conf&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>    . <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$XDG_CONFIG_HOME</span><span style=color:#a5d6ff>/locale.conf&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>elif</span> <span style=color:#ff7b72;font-weight:700>[</span> -n <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span> <span style=color:#ff7b72;font-weight:700>&amp;&amp;</span> <span style=color:#ff7b72;font-weight:700>[</span> -r <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/.config/locale.conf&#34;</span> <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>    . <span style=color:#a5d6ff>&#34;</span><span style=color:#79c0ff>$HOME</span><span style=color:#a5d6ff>/.config/locale.conf&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>elif</span> <span style=color:#ff7b72;font-weight:700>[</span> -r /etc/locale.conf <span style=color:#ff7b72;font-weight:700>]</span>; <span style=color:#ff7b72>then</span>
+</span></span><span style=display:flex><span>    . /etc/locale.conf
+</span></span><span style=display:flex><span>  <span style=color:#ff7b72>fi</span>
+</span></span><span style=display:flex><span><span style=color:#ff7b72>fi</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># define default LANG to C if not already defined</span>
+</span></span><span style=display:flex><span><span style=color:#79c0ff>LANG</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>${</span><span style=color:#79c0ff>LANG</span><span style=color:#ff7b72>:-</span><span style=color:#79c0ff>C</span><span style=color:#a5d6ff>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># export all locale (7) variables when they exist</span>
+</span></span><span style=display:flex><span>export LANG LANGUAGE LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>       LC_MESSAGES LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT <span style=color:#79c0ff>\
+</span></span></span><span style=display:flex><span><span style=color:#79c0ff></span>       LC_IDENTIFICATION
+</span></span></code></pre></div></details><br><p>ただ、 <code>/etc/locale.conf</code> に関しては systemd での起動時どこか早いタイミングで別途読み込みが行われているらしく、
+lightdm のラッパースクリプトを実行するタイミングで既に LANG 変数がセットされているため、
+読み込み処理が行われないような感じになっていた。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>$ <span style=color:#79c0ff>PAGER</span><span style=color:#ff7b72;font-weight:700>=</span>cat man locale.conf | head -10
+</span></span><span style=display:flex><span>LOCALE.CONF<span style=color:#ff7b72;font-weight:700>(</span>5<span style=color:#ff7b72;font-weight:700>)</span>                                                 locale.conf                                                LOCALE.CONF<span style=color:#ff7b72;font-weight:700>(</span>5<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>NAME
+</span></span><span style=display:flex><span>       locale.conf - Configuration file <span style=color:#ff7b72>for</span> locale settings
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SYNOPSIS
+</span></span><span style=display:flex><span>       /etc/locale.conf
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>DESCRIPTION
+</span></span><span style=display:flex><span>       The /etc/locale.conf file configures system-wide locale settings. It is read at early boot by systemd<span style=color:#ff7b72;font-weight:700>(</span>1<span style=color:#ff7b72;font-weight:700>)</span>.
+</span></span></code></pre></div><p>どうするか少し悩んだが、最終的には前述の設定作業の通り <code>~/.profile</code> に
+LANG 変数の状態を問わず <code>~/.config/locale.conf</code> があれば読み込むような処理を追加して解消した。</p><p>具体的に <code>/etc/locale.conf</code> を読み込んでいる箇所については、
+気が向いたときにでももう少し調べてみようと思う。（調べなさそう）</p><h2 id=おわりに>おわりに</h2><p>冒頭の背景の通り、英語ロケールでのデメリットが気になってきたので今回日本語ロケールに変更したが、
+日本語ロケール故に気になることもあるかもなとは思っている。</p><p>例えば、ソフトによって日本語対応してないものもあるだろうとは思っているが、
+メニューが日本語だったり英語だったりするのがどの程度気になるか、とか。</p><p>それ以外にも不満点が出てくるかも知れないが、しばらく使ってみて気になるようならまた英語ロケールに戻すかもとは思っている。
+（今回色々調べたおかげで、次は <code>~/.config/locale.conf</code> を修正するだけで良くなったはず）</p></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_group title"><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>ユーザセッションでロケールを変更する</dd></div></div><div class="article_meta_group timestamp"><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2023-03-16T19:03:53+09:00>2023-03-16</time></dd></div></div><div class="article_meta_group taxonomy"><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/linux/>Linux</a></li></ul></dd></div></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#背景>背景</a></li><li><a href=#設定作業>設定作業</a><ul><li><a href=#ユーザディレクトリの設定>ユーザディレクトリの設定</a></li><li><a href=#ロケールの変更>ロケールの変更</a></li></ul></li><li><a href=#余談>余談</a><ul><li><a href=#xdg-user-dirs-を使う場合について>xdg-user-dirs を使う場合について</a></li><li><a href=#configlocaleconf-の読み込みタイミングについて>~/.config/locale.conf の読み込みタイミングについて</a></li></ul></li><li><a href=#おわりに>おわりに</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>
