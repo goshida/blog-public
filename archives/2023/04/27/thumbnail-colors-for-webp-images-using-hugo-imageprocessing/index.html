@@ -1,0 +1,121 @@
+<!doctype html><html lang=ja><script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4NDL34NBB"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-Q4NDL34NBB")</script><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>Hugo の ImageProcessins で WebP 画像のサムネイルを生成すると色がおかしくなったので調べた - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="ブログに載せている画像を WebP 形式に統一しようとしていたのだが、
+convert コマンドで単純に変換した場合に Hugo の ImageProcessing を使ったサムネイル画像の色がおかしくなった。
+それを解消するために調べたことをまとめる。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="Hugo の ImageProcessins で WebP 画像のサムネイルを生成すると色がおかしくなったので調べた"><meta property="og:description" content="ブログに載せている画像を WebP 形式に統一しようとしていたのだが、
+convert コマンドで単純に変換した場合に Hugo の ImageProcessing を使ったサムネイル画像の色がおかしくなった。
+それを解消するために調べたことをまとめる。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2023-04-27T13:03:57+09:00"><meta property="article:modified_time" content="2023-04-27T13:03:57+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/about/>About</a></li><li class=navigation_item><a href=/policy/>Policy</a></li></ul></nav></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container itemscope itemtype=https://schema.org/BlogPosting><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title itemprop=headline>Hugo の ImageProcessins で WebP 画像のサムネイルを生成すると色がおかしくなったので調べた</h1></header><section class=article_body itemprop=articleBody><p>ブログに載せている画像を WebP 形式に統一しようとしていたのだが、
+convert コマンドで単純に変換した場合に Hugo の ImageProcessing を使ったサムネイル画像の色がおかしくなった。
+それを解消するために調べたことをまとめる。</p><p>一応最初に断っておくと、自分は画像処理について体系的に何か学んだわけでも無いし普段から趣味で色々やってるわけでも無いので、
+あくまで画像素人が調べて試した程度のものとして読んで貰えればと思う。</p><h2 id=まとめ>まとめ</h2><p>最初に結果だけまとめておくと、変換時に Lossy WebP ではなく Lossless WebP に変換すると解消する。</p><p>（ <code>convert -quality 100 &lt;input.png> &lt;output.webp></code> や <code>cwebp -lossless &lt;input.png> -o &lt;output.webp></code> ）</p><h2 id=背景>背景</h2><p>先日 <a href=/archives/2023/04/22/switch-to-my-own-custom-hugo-theme/>Hugo のテーマを自作のものに切り替えて</a> から、 PageSpeed Insights を回してどこから弄るかの参考にしているのだが、
+その中で「 WebP とか最新のフォーマット使うと画像サイズ圧縮できて表示早くなるよ」みたいなことも提案されたので試している。</p><p>これまで画像のフォーマット変換は主に convert コマンドを使ってやっていて、
+今回も単純にこんな感じのコマンドで WebP 形式に変換して差し替えてみていた。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 変換コマンド1</span>
+</span></span><span style=display:flex><span>convert original.png convert1.webp
+</span></span></code></pre></div><p>のだが、これを Hugo の ImageProcessor を介してサムネイルを生成すると、何故か色が暗くなる。</p><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/original_capture.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/original_capture.webp alt=PNG画像そのまま使った場合のサムネイル表示のキャプチャ画像></a><figcaption>PNG画像をそのまま使った場合のサムネイルのキャプチャ</figcaption></figure><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/convert1_capture.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/convert1_capture.webp alt=変換コマンド1で変換した場合のサムネイル表示のキャプチャ画像></a><figcaption>変換コマンド1で変換したサムネイルのキャプチャ</figcaption></figure><p>自分の場合この程度色味が変わった所で困るような画像もそんなに無いとは思うのと、
+クリックしてフルサイズで見ると違いは分からなくなる（少なくとも自分の目では）ので無視しても良かったが、
+流石に変わり過ぎでは？となったので解消できないか調べたり試したりした。</p><h2 id=自分の環境>自分の環境</h2><p>一応今回作業した環境について触れておくとこんな感じ。</p><ul><li>OS : Linux (ArchLinux)</li><li>Imagemagick バージョン : 7.1.1-7</li><li>libwebp バージョン : 1.3.0 ( libsharpyuv: 0.2.0 )</li></ul><p>また、今回色々試すのに使った画像としては前述のブラウザの表示をスクリーンショットしたもので、オリジナル画像の解像度などは以下</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ exiftool single.png 
+</span></span><span style=display:flex><span>ExifTool Version Number         : 12.60
+</span></span><span style=display:flex><span>File Name                       : single.png
+</span></span><span style=display:flex><span>Directory                       : .
+</span></span><span style=display:flex><span>File Size                       : <span style=color:#a5d6ff>326</span> kB
+</span></span><span style=display:flex><span>File Modification Date/Time     : 2023:04:26 16:04:08+09:00
+</span></span><span style=display:flex><span>File Access Date/Time           : 2023:04:26 16:04:08+09:00
+</span></span><span style=display:flex><span>File Inode Change Date/Time     : 2023:04:26 16:04:08+09:00
+</span></span><span style=display:flex><span>File Permissions                : -rw-r--r--
+</span></span><span style=display:flex><span>File Type                       : PNG
+</span></span><span style=display:flex><span>File Type Extension             : png
+</span></span><span style=display:flex><span>MIME Type                       : image/png
+</span></span><span style=display:flex><span>Image Width                     : <span style=color:#a5d6ff>1685</span>
+</span></span><span style=display:flex><span>Image Height                    : <span style=color:#a5d6ff>1067</span>
+</span></span><span style=display:flex><span>Bit Depth                       : <span style=color:#a5d6ff>8</span>
+</span></span><span style=display:flex><span>Color Type                      : RGB with Alpha
+</span></span><span style=display:flex><span>Compression                     : Deflate/Inflate
+</span></span><span style=display:flex><span>Filter                          : Adaptive
+</span></span><span style=display:flex><span>Interlace                       : Noninterlaced
+</span></span><span style=display:flex><span>Significant Bits                : <span style=color:#a5d6ff>8</span> <span style=color:#a5d6ff>8</span> <span style=color:#a5d6ff>8</span> <span style=color:#a5d6ff>8</span>
+</span></span><span style=display:flex><span>Image Size                      : 1685x1067
+</span></span><span style=display:flex><span>Megapixels                      : 1.8
+</span></span></code></pre></div><p>カメラで撮影した写真の類もサイト内でいくつか使ってはいるが割合としては少ないし、これからも画面キャプチャなどが多いのは変わらないと思うので、
+いろんな種類の画像を使って試すということはしてない。</p><h2 id=調べたこと>調べたこと</h2><h3 id=convert-コマンドについて>convert コマンドについて</h3><p>まず、画像変換に使っている convert コマンドについて改めてざっくりまとめておく。</p><p>convert コマンドは ImageMagick という画像処理を行うソフトウェアスイートに含まれているコマンドで、
+ImageMagick は様々な形式の画像を処理するソフトウェア群をまとめたパッケージ。
+そのソフトウェア群の中に Google が開発した WebP 画像フォーマットを扱うためのライブラリである libwebp も含まれており、
+convert コマンドはこの libwebp ライブラリを用いることで WebP 形式の画像を扱っている。</p><p>また、libwebp には WebP への変換を行うコマンドである cwebp コマンドも含まれており、
+convert コマンドは内部でコレを呼び出す形で処理を行っている。
+そのため convert コマンドを経由しなくても、直接 cwebp コマンドを使って他形式から WebP への変換含め WebP 画像を扱うこともできる。</p><p>WebP 含め、 ImageMagick でネイティブ対応していない形式の変換はこういった各種ライブラリに委譲する形で処理を行っており、
+その際にどういったコマンドを使っているかは ImageMagick のこの辺のコードを眺めるとそれっぽいことが書いてある。（雰囲気で読んでいる）</p><ul><li><a href=https://github.com/ImageMagick/ImageMagick/blob/7.1.1-7/MagickCore/delegate.c#L98-L159>ImageMagick/delegate.c at main · ImageMagick/ImageMagick · GitHub</a></li></ul><h3 id=convert-コマンドと-cwebp-コマンドについて>convert コマンドと cwebp コマンドについて</h3><p>convert コマンドは、 PNG から WebP への変換を行う際に cwebp を使っていることが分かったが、
+cwebp を呼び出す際に convert コマンド内でパラメータを注入してると結果が変わるだろうことが予想される。</p><p>本来なら前述のコードを追っかけるのが正しいとは思うのだが、
+OSS のコードを読み慣れてないのもあり正しく追える気がしなかったので、実際に変換して結果を比較する形で見てみる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ ls -lh
+</span></span><span style=display:flex><span>合計 320K
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 319K  4月 <span style=color:#a5d6ff>27</span> 02:34 single.png
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ convert single.png single.convert.webp
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ cwebp single.png -o single.cwebp.webp
+</span></span><span style=display:flex><span>Saving file <span style=color:#a5d6ff>&#39;single.cwebp.webp&#39;</span>
+</span></span><span style=display:flex><span>File:      single.png
+</span></span><span style=display:flex><span>Dimension: <span style=color:#a5d6ff>1685</span> x <span style=color:#a5d6ff>1067</span>
+</span></span><span style=display:flex><span>Output:    <span style=color:#a5d6ff>113828</span> bytes Y-U-V-All-PSNR 43.11 43.22 43.65   43.21 dB
+</span></span><span style=display:flex><span>           <span style=color:#ff7b72;font-weight:700>(</span>0.51 bpp<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>block count:  intra4:       <span style=color:#a5d6ff>1862</span>  <span style=color:#ff7b72;font-weight:700>(</span>26.22%<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>              intra16:      <span style=color:#a5d6ff>5240</span>  <span style=color:#ff7b72;font-weight:700>(</span>73.78%<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>              skipped:      <span style=color:#a5d6ff>4873</span>  <span style=color:#ff7b72;font-weight:700>(</span>68.61%<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>bytes used:  header:            <span style=color:#a5d6ff>462</span>  <span style=color:#ff7b72;font-weight:700>(</span>0.4%<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>             mode-partition:  <span style=color:#a5d6ff>10948</span>  <span style=color:#ff7b72;font-weight:700>(</span>9.6%<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span> Residuals bytes  |segment 1|segment 2|segment 3|segment 4|  total
+</span></span><span style=display:flex><span>    macroblocks:  |       3%|      11%|      21%|      65%|    <span style=color:#a5d6ff>7102</span>
+</span></span><span style=display:flex><span>      quantizer:  |      <span style=color:#a5d6ff>36</span> |      <span style=color:#a5d6ff>34</span> |      <span style=color:#a5d6ff>28</span> |      <span style=color:#a5d6ff>23</span> |
+</span></span><span style=display:flex><span>   filter level:  |      <span style=color:#a5d6ff>11</span> |       <span style=color:#a5d6ff>7</span> |       <span style=color:#a5d6ff>6</span> |       <span style=color:#a5d6ff>3</span> |
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ ls -lh
+</span></span><span style=display:flex><span>合計 544K
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 112K  4月 <span style=color:#a5d6ff>27</span> 02:37 single.convert.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 112K  4月 <span style=color:#a5d6ff>27</span> 02:37 single.cwebp.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 319K  4月 <span style=color:#a5d6ff>27</span> 02:34 single.png
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ sha256sum ./*
+</span></span><span style=display:flex><span>6885f0057a6f1eba0e50e5b990010bbaf2364651a68f84009dd55d009e3d33cf  ./single.convert.webp
+</span></span><span style=display:flex><span>6885f0057a6f1eba0e50e5b990010bbaf2364651a68f84009dd55d009e3d33cf  ./single.cwebp.webp
+</span></span><span style=display:flex><span>03dd86c4ea4c43e2aa8d85d0287ecb15eb387ea14f1b6b66bd6d38f8aaad9ec1  ./single.png
+</span></span></code></pre></div><p>画像比較的な何かをするつもりだったが、ファイルのハッシュ値が同じなのでそこまですることもなく同じ画像を生成しているっぽい。
+ということで、convert 内で特別何かパラメータを注入したりはしてなさそう。</p><h3 id=変換時の画像品質を変えての比較>変換時の画像品質を変えての比較</h3><p>Web サイトに載せる画像の圧縮の話でありがちな画像品質の話で、コレを変えることで改善しないかというのを見た。</p><p>JPG で画像を圧縮する話でよく見る <code>-quality</code> オプションがあるが、WebP を扱う場合でもそのまま使える。
+convert コマンドの help を見ると以下のような形で書いていて、JPG/MIFF/PNG にしか効かないようにも見えるが実際に指定してみると利く。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ convert -h | grep quality
+</span></span><span style=display:flex><span>  -quality value       JPEG/MIFF/PNG compression level
+</span></span></code></pre></div><p><code>-quality 100</code> を指定すると、 Lossless な WebP として処理するようなフラグを立ててくれるっぽい。（雰囲気で読んでいる）</p><ul><li><a href=https://github.com/ImageMagick/ImageMagick/blob/7.1.1-7/coders/webp.c#L1150-L1151>ImageMagick/webp.c at 7.1.1-7 · ImageMagick/ImageMagick · GitHub</a></li></ul><p><code>-quality</code> のデフォルト値は 75 になっている。
+<code>-quality 75</code> を指定したものと、 <code>-quality</code> 無指定で生成したものを用意して、
+先程同様にハッシュを取ることでも同じファイルが生成されてるのが確認できる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>~/work
+</span></span><span style=display:flex><span>❯ ls
+</span></span><span style=display:flex><span>single.convert.webp  single.cwebp.webp  single.png
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work 
+</span></span><span style=display:flex><span>❯ convert single.png single.quality-default.webp
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work 
+</span></span><span style=display:flex><span>❯ convert -quality <span style=color:#a5d6ff>75</span> single.png single.quality-75.webp
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~/work 
+</span></span><span style=display:flex><span>❯ sha256sum ./single.quality-*
+</span></span><span style=display:flex><span>6885f0057a6f1eba0e50e5b990010bbaf2364651a68f84009dd55d009e3d33cf  ./single.quality-75.webp
+</span></span><span style=display:flex><span>6885f0057a6f1eba0e50e5b990010bbaf2364651a68f84009dd55d009e3d33cf  ./single.quality-default.webp
+</span></span></code></pre></div><p>ということでいくつか <code>-quality</code> の値をいろいろ変えて試してみたのがこんな感じ。（サムネイルのサイズは 400x400）</p><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-50.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-50_hu795336faad36344fc0b64289d88ccd14_94026_400x400_fit_q75_h2_box_2.webp alt=quality50で生成場合の画像></a><figcaption>quality 50</figcaption></figure><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-75.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-75_hu7b8f654e039bebb823684715ca744104_113828_400x400_fit_q75_h2_box_2.webp alt=quality75で生成場合の画像></a><figcaption>quality 75 (デフォルト)</figcaption></figure><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-85.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-85_hu19ef2d8c6c2a588bec27c29afdf91310_146352_400x400_fit_q75_h2_box_2.webp alt=quality85で生成場合の画像></a><figcaption>quality 85</figcaption></figure><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-95.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-95_hu719dd0335fbd7916a7ff32b887ace292_215438_400x400_fit_q75_h2_box_2.webp alt=quality95で生成場合の画像></a><figcaption>quality 95</figcaption></figure><figure><a href=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-100.webp target=_self><img src=/archives/2023/04/27/thumbnail-colors-for-webp-images-using-hugo-imageprocessing/images/quality-100_hu8809e8ea470bd2df13f7913476ed278d_113102_400x400_fit_q75_h2_box_2.webp alt=quality100で生成場合の画像></a><figcaption>quality 100 (Lossless)</figcaption></figure><p><code>-quality</code> の値を上下させても変化はなかったのだが、 Lossless にすると解消することが分かった。
+（ちなみにクリックして開くサムネイルに変換する前の画像の方だと自分の目では差が全然分からなかった）</p><p>画像品質を上げることによるファイルサイズへの影響も見てみるとこんな感じ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ ls -lh single.png 
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 319K  4月 <span style=color:#a5d6ff>26</span> 16:04 single.png
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>❯ ls -lh quality-*
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 111K  4月 <span style=color:#a5d6ff>27</span> 09:55 quality-100.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida  92K  4月 <span style=color:#a5d6ff>27</span> 09:55 quality-50.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 112K  4月 <span style=color:#a5d6ff>27</span> 09:55 quality-75.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 143K  4月 <span style=color:#a5d6ff>27</span> 09:55 quality-85.webp
+</span></span><span style=display:flex><span>-rw-r--r-- <span style=color:#a5d6ff>1</span> shida shida 211K  4月 <span style=color:#a5d6ff>27</span> 09:55 quality-95.webp
+</span></span></code></pre></div><p>個人的には意外な結果になった。
+基本的に <code>-quality</code> の値を上げるとファイルサイズもそれに応じて大きくなるのだが、 <code>-quality=100</code> にしたらデフォルトの <code>-quality=75</code> と同じ（というかわずかに小さい）くらいのファイルサイズになった。</p><p>そうなの？と思って少し調べてみるとこんな感じの Qiita 記事が見つかった。</p><ul><li><a href=https://qiita.com/yoya/items/a000c2e123d448a37f47#%E4%BB%95%E6%A7%98>WebP Lossless はちゃんと Lossless してます - Qiita</a></li></ul><p>記事の主旨は若干違うが、 Lossless WebP ( <code>quality = 100</code> ) は Lossy WebP ( <code>quality &lt; 100</code> ) と処理が全然違うらしいので、画像によってはこういうこともあるのかもしれない。</p><p>Hugo ImageProcessing でのサムネイルの色問題が解消して、画像品質も下げず、ファイルサイズも抑えられるならコレ（ Lossless WebP 変換 ）で良いじゃんとなった。</p><p>とはいえあくまでサンプル画像1個で試した結果でしか無いので、
+しばらくは <code>-quality=75</code> と <code>-quality=100</code> の両方で変換してみて基本は Lossless を使う、
+Lossless のサイズがすごく大きくなる様なケースがあればまたその時考える、という方針で行こうかなと思う。</p><h2 id=感想>感想</h2><p>変換時の色の調整なども試す必要あるのかなと思っていたのだが、画像品質のパラメータだけで解決したので良かった。</p><p>また、 Lossy WebP と Lossless WebP は同じ WebP 形式ではあるものの中身はほぼ別物、
+Lossless だからと言って必ずしも Lossy 圧縮よりもファイルサイズが大きくなるというわけでも無い、という知見も得られたのでそういう意味でも良かった。</p><p>若干腑に落ちてない部分としては、サムネイルになる前の画像を開くと（少なくとも自分の目では）差が分からないのに、
+サムネイルになるとあれだけ色味が変わるのはやっぱり変な気はしている。
+Hugo の ImageProcessing の処理に何かあるんじゃないかというのは疑っており、気が向いたらそっちの方向で調べて見ても良いかもしれない。</p><h2 id=参考>参考</h2><ul><li><a href=https://github.com/ImageMagick/ImageMagick>GitHub - ImageMagick/ImageMagick: 🧙‍♂️ ImageMagick 7</a></li><li><a href=https://qiita.com/yoya/items/a000c2e123d448a37f47#%E4%BB%95%E6%A7%98>WebP Lossless はちゃんと Lossless してます - Qiita</a></li><li><a href=https://wave.hatenablog.com/entry/2016/04/30/070900>WebP lossless might be lossy in 16 bit - 記憶は人なり</a></li><li><a href=https://blog.ideamans.com/2020/08/webp-params-2020.html>【保存版】知らないと画質が落ちるWebP変換おすすめパラメーター設定例 JPEG/PNG編 - アイデアマンズブログ</a></li><li><a href=https://qiita.com/miyanaga/items/45a8fb7683f475287f8b>実際の業務でWebPを使うときのおすすめ変換パラメーター JPEG/PNG編 - Qiita</a></li></ul></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>Hugo の ImageProcessins で WebP 画像のサムネイルを生成すると色がおかしくなったので調べた</dd></div><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2023-04-27T13:03:57+09:00>2023-04-27</time></dd></div><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/hugo/>Hugo</a></li><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/imagemagick/>ImageMagick</a></li></ul></dd></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#まとめ>まとめ</a></li><li><a href=#背景>背景</a></li><li><a href=#自分の環境>自分の環境</a></li><li><a href=#調べたこと>調べたこと</a><ul><li><a href=#convert-コマンドについて>convert コマンドについて</a></li><li><a href=#convert-コマンドと-cwebp-コマンドについて>convert コマンドと cwebp コマンドについて</a></li><li><a href=#変換時の画像品質を変えての比較>変換時の画像品質を変えての比較</a></li></ul></li><li><a href=#感想>感想</a></li><li><a href=#参考>参考</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>
