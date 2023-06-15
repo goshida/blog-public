@@ -1,0 +1,316 @@
+<!doctype html><html lang=ja><script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4NDL34NBB"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-Q4NDL34NBB")</script><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,minimum-scale=1,user-scalable=yes"><title>nmcli を使って固定 IP アドレスの設定を行う - SHIDALOG</title><meta name=author content="goshida"><meta name=description content="nmcli を使ってネットワーク設定を行ったので、やったこととその中で気付いたこと等。"><meta name=generator content="Hugo 0.105.0"><meta property="og:title" content="nmcli を使って固定 IP アドレスの設定を行う"><meta property="og:description" content="nmcli を使ってネットワーク設定を行ったので、やったこととその中で気付いたこと等。"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.shida-ws.net/archives/2023/02/04/static-ip-settings-by-nmcli/"><meta property="article:section" content="archives"><meta property="article:published_time" content="2023-02-04T14:03:27+09:00"><meta property="article:modified_time" content="2023-02-16T16:07:20+09:00"><link rel=stylesheet href=https://blog.shida-ws.net/css/style.css><link rel=stylesheet href=https://blog.shida-ws.net/css/custom.css><body><div class=site_container><header class=site_header_container><div class="header_container content_area"><div class=header_body><input type=checkbox class=menu_trigger id=menu_trigger><div class=header_main_container><div class=logo_container><div class=site_logo><a href=https://blog.shida-ws.net/>SHIDALOG</a></div><div class=site_tagline>備忘録的なもの</div></div><div class=menu_button_container><label class="menu_button is_icon icon_menu" for=menu_trigger></label></div></div><div class=menu_container><nav class=site_navigation_container><ul class=navigation_list><li class=navigation_item><a href=/archives/>Archives</a></li><li class=navigation_item><a href=/tags/>Tags</a></li><li class=navigation_item><a href=/about/>About</a></li><li class=navigation_item><a href=/policy/>Policy</a></li></ul></nav><div class=social_container><ul class=social_list><li class=social_item><a class="is_icon icon_github" href=https://github.com/goshida></a></li><li class=social_item><a class="is_icon icon_rss" href=/index.xml></a></li></ul></div></div></div></div></header><div class=site_main_container><div class="single_container content_area"><div class=single_main_container itemscope itemtype=https://schema.org/BlogPosting><main class="article_main_container card"><article class=article_container><header class=article_header><h1 class=article_title itemprop=headline>nmcli を使って固定 IP アドレスの設定を行う</h1></header><section class=article_body itemprop=articleBody><p>nmcli を使ってネットワーク設定を行ったので、やったこととその中で気付いたこと等。</p><p>諸用で自宅にサーバでも立てるかと思い作業中で、その設定作業の中で固定 IP 設定をするために nmcli を初めて使った。</p><p>NetworkManager 自体は普段使っているデスクトップマシンでも使っていたのだが、
+インストール時点で特に設定せずとも疎通できていたのと、ちょっと設定弄る場合も GUI で済ませていた。
+なので nmcli の存在自体は知ってはいつつ実際に使ったことはなかったのだが、
+久しぶりに GUI 無しの Linux で色々設定しているというのもあり、
+せっかくなので触ってみようと思った次第。</p><p>実際やってみると NetworkManager での connection の概念とか、 GUI だと全然意識してなかったことに気付いたりしたので、
+設定作業としてやったこととその中で気付いたこと等をまとめてみる。</p><h2 id=nmcli-について>nmcli について</h2><p>文字通り Linux でのネットワーク管理に広く使われている NetworkManger のコマンドラインインターフェース。</p><p>コマンドの基本的な使い方としてはこんな感じ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ nmcli help
+</span></span><span style=display:flex><span>Usage: nmcli <span style=color:#ff7b72;font-weight:700>[</span>OPTIONS<span style=color:#ff7b72;font-weight:700>]</span> OBJECT <span style=color:#ff7b72;font-weight:700>{</span> COMMAND | help <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>OPTIONS
+</span></span><span style=display:flex><span>  -a, --ask                                ask <span style=color:#ff7b72>for</span> missing parameters
+</span></span><span style=display:flex><span>  -c, --colors auto|yes|no                 whether to use colors in output
+</span></span><span style=display:flex><span>  -e, --escape yes|no                      escape columns separators in values
+</span></span><span style=display:flex><span>  -f, --fields &lt;field,...&gt;|all|common      specify fields to output
+</span></span><span style=display:flex><span>  -g, --get-values &lt;field,...&gt;|all|common  shortcut <span style=color:#ff7b72>for</span> -m tabular -t -f
+</span></span><span style=display:flex><span>  -h, --help                               print this help
+</span></span><span style=display:flex><span>  -m, --mode tabular|multiline             output mode
+</span></span><span style=display:flex><span>  -o, --overview                           overview mode
+</span></span><span style=display:flex><span>  -p, --pretty                             pretty output
+</span></span><span style=display:flex><span>  -s, --show-secrets                       allow displaying passwords
+</span></span><span style=display:flex><span>  -t, --terse                              terse output
+</span></span><span style=display:flex><span>  -v, --version                            show program version
+</span></span><span style=display:flex><span>  -w, --wait &lt;seconds&gt;                     set timeout waiting <span style=color:#ff7b72>for</span> finishing operations
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>OBJECT
+</span></span><span style=display:flex><span>  g<span style=color:#ff7b72;font-weight:700>[</span>eneral<span style=color:#ff7b72;font-weight:700>]</span>       NetworkManager<span style=color:#a5d6ff>&#39;s general status and operations
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>  n[etworking]    overall networking control
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>  r[adio]         NetworkManager radio switches
+</span></span></span><span style=display:flex><span><span style=color:#a5d6ff>  c[onnection]    NetworkManager&#39;</span>s connections
+</span></span><span style=display:flex><span>  d<span style=color:#ff7b72;font-weight:700>[</span>evice<span style=color:#ff7b72;font-weight:700>]</span>        devices managed by NetworkManager
+</span></span><span style=display:flex><span>  a<span style=color:#ff7b72;font-weight:700>[</span>gent<span style=color:#ff7b72;font-weight:700>]</span>         NetworkManager secret agent or polkit agent
+</span></span><span style=display:flex><span>  m<span style=color:#ff7b72;font-weight:700>[</span>onitor<span style=color:#ff7b72;font-weight:700>]</span>       monitor NetworkManager changes
+</span></span></code></pre></div><p>コマンドの途中でも help 付ければ候補や説明を表示してくれる他、コマンドはある程度省略できたりする。（例えば <code>nmcli device status</code> = <code>nmcli d s</code> とか） <sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup></p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ nmcli d help
+</span></span><span style=display:flex><span>Usage: nmcli device <span style=color:#ff7b72;font-weight:700>{</span> COMMAND | help <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>COMMAND :<span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#ff7b72;font-weight:700>{</span> status | show | set | connect | reapply | modify | disconnect | delete | monitor | wifi | lldp <span style=color:#ff7b72;font-weight:700>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  status
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  show <span style=color:#ff7b72;font-weight:700>[</span>&lt;ifname&gt;<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  set <span style=color:#ff7b72;font-weight:700>[</span>ifname<span style=color:#ff7b72;font-weight:700>]</span> &lt;ifname&gt; <span style=color:#ff7b72;font-weight:700>[</span>autoconnect yes|no<span style=color:#ff7b72;font-weight:700>]</span> <span style=color:#ff7b72;font-weight:700>[</span>managed yes|no<span style=color:#ff7b72;font-weight:700>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>後略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span></code></pre></div><p>あと全てのディストリビューションでもそうかは確認してないが、
+NetworkManager のパッケージに bash 用の補完スクリプトも付属していたので、bash を使ってる場合は設定しておくと良さげ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ pacman -Ql networkmanager | grep completion
+</span></span><span style=display:flex><span>networkmanager /usr/share/bash-completion/
+</span></span><span style=display:flex><span>networkmanager /usr/share/bash-completion/completions/
+</span></span><span style=display:flex><span>networkmanager /usr/share/bash-completion/completions/nmcli
+</span></span></code></pre></div><h2 id=networkmanager-における-connection-の概念>NetworkManager における connection の概念</h2><p>具体的な設定作業の前に NetworkManager で connection と呼ぶモノについて。</p><p>NetworkManager は有線なり Wi-Fi なりの各ネットワークデバイスに対して直接 IP アドレスやルーティング等の設定を行うのではなく、
+一旦 connection と呼ばれるプロファイルの様なものを作成し、それを各インターフェースに紐付ける形を取っている。</p><figure><a href=/archives/2023/02/04/static-ip-settings-by-nmcli/images/connection.drawio.webp target=_self><img src=/archives/2023/02/04/static-ip-settings-by-nmcli/images/connection.drawio_hu5f650f41a08eba93dd3da2ed28adbcbc_6844_600x600_fit_q75_h2_box_2.webp alt=connectionのイメージ図></a><figcaption>こんなイメージ</figcaption></figure><p>こうすることで論理的なネットワーク設定を複数持つことができて、
+それらの設定を素早く切り替えたりできるのがメリットらしい。</p><p>デスクトップ・サーバマシンでそんな頻繁にネットワーク設定を切り替えることがあるとも思えない（自分がそういう経験無いだけかもだが）ので、
+どちらかというと持ち運んでいろんなネットワークに繋げて使うノート PC とかを想定した設計だろうか。</p><h2 id=設定作業>設定作業</h2><h3 id=既存設定の確認>既存設定の確認</h3><p>以下の様な感じでネットワークデバイスと、現在有効な connection などを確認できる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ネットワークデバイスの一覧とそれに紐付いている connection</span>
+</span></span><span style=display:flex><span>❯ nmcli device status
+</span></span><span style=display:flex><span>DEVICE           TYPE      STATE         CONNECTION         
+</span></span><span style=display:flex><span>eno1             ethernet  connected     Wired connection <span style=color:#a5d6ff>1</span> 
+</span></span><span style=display:flex><span>wlp58s0          wifi      disconnected  --                 
+</span></span><span style=display:flex><span>p2p-dev-wlp58s0  wifi-p2p  disconnected  --                 
+</span></span><span style=display:flex><span>lo               loopback  unmanaged     --                 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 作成されている connection の一覧</span>
+</span></span><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>Wired connection <span style=color:#a5d6ff>1</span>  255ba1f6-55f2-322e-8fa0-701bcf4cecc3  ethernet  eno1
+</span></span></code></pre></div><p>NetworkManager の初回起動時と思われるが、デフォルトで <code>Wired connection 1</code> という DHCP 接続する connection がすでに作成されている。
+今回はこれには手を加えず、新しく connection を作成・切り替える形で設定を行う。</p><h3 id=新規-connection-の作成>新規 connection の作成</h3><p>ひとまず connection を作成。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># connection 作成</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection add con-name wired-static type ethernet
+</span></span><span style=display:flex><span>Connection <span style=color:#a5d6ff>&#39;wired-static&#39;</span> <span style=color:#ff7b72;font-weight:700>(</span>7cfee609-e3a0-4853-b69e-a2a9d3b20fee<span style=color:#ff7b72;font-weight:700>)</span> successfully added.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># connection が作成されたことの確認</span>
+</span></span><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>Wired connection <span style=color:#a5d6ff>1</span>  255ba1f6-55f2-322e-8fa0-701bcf4cecc3  ethernet  eno1   
+</span></span><span style=display:flex><span>wired-static        7cfee609-e3a0-4853-b69e-a2a9d3b20fee  ethernet  --     
+</span></span></code></pre></div><p>show や status といった確認コマンドなら不要だが、 add のような変更を伴う場合は root 権限が必要になる。 <sup id=fnref:2><a href=#fn:2 class=footnote-ref role=doc-noteref>2</a></sup>
+（権限が足りない状態で実行しようとすると <code>Insufficient privileges</code> と言われて失敗する）</p><p>パラメータの補足としてはこの辺り</p><ul><li>con-name<ul><li>コネクションの名前<ul><li>nmcli でコネクションを指定するときは一応 UUID がキーにはなるが、名前で一意に決まるなら名前でも指定できる</li><li>同じ名前でコネクションを作成することもできるが、毎回 UUID コピペするのも面倒だし間違いの元なので基本的には被らせないようにするのが無難だろうと思う</li></ul></li><li>省略した場合は type に指定した値が使われるっぽい（ ethernet とか）</li></ul></li><li>type<ul><li>接続タイプ（ ethernet, wifi, 等）を指定する。 <code>nmcli connection add help</code> とかすると色々あるのが分かる。</li></ul></li></ul><p>作成する接続タイプによってはもう少し必須パラメータがあったりするが、今回作成する ethernet ではひとまずこのくらい。</p><h3 id=ipv4-関連の設定>IPv4 関連の設定</h3><p>IP アドレス等、各種設定を connection に追加していく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># IPv4 アドレスの設定</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ipv4.addresses 192.168.2.15/24
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># IPv4 デフォルトゲートウェイの設定</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ipv4.gateway 192.168.2.1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># DNS サーバの設定</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ipv4.dns 8.8.8.8
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static +ipv4.dns 192.168.2.1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># IPv4 の設定方法を auto ( DHCP ) から manual に変更</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ipv4.method manual
+</span></span></code></pre></div><p>パラメータの補足</p><ul><li>ipv4.addresses<ul><li>addresses とある通り複数設定できる</li><li>CIDR 形式じゃなくても（ <code>192.168.2.15</code> でも）設定は可能だが 、その場合 <code>/32</code> として設定される</li></ul></li><li>ipv4.dns<ul><li>値が複数ある場合、今回のようにひとつ設定して <code>+</code> で追加していく形でも設定できるが、 <code>8.8.8.8,192.168.2.1</code> のようにカンマ区切りでまとめて設定もできる</li><li>複数の値を持つパラメータから一部削除する場合は、 <code>-ipv4.dns 8.8.8.8</code> のように削るか、カンマ区切りで全部列挙して上書きする</li></ul></li><li>ipv4.method<ul><li>auto (DHCPで取得) から manual に変更している</li><li>manual を設定する場合 ipv4.address 等いくつかパラメータが設定されている必要がある</li></ul></li></ul><p>また、今回はパラメータをひとつずつ設定したかったので分けているが、以下の様に複数のパラメータを1行でまとめて設定することもできる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ipv4.addresses 192.168.2.15/24 ipv4.gateway 192.168.2.1 ipv4.dns 8.8.8.8,192.168.2.1 ipv4.method manual
+</span></span></code></pre></div><p>設定としてはシンプルだが今回はこのくらい。</p><h3 id=作成した-connection-の設定確認>作成した connection の設定確認</h3><p>一応作成した connection 設定値を眺めてみる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ <span style=color:#79c0ff>PAGER</span><span style=color:#ff7b72;font-weight:700>=</span>cat nmcli connection show wired-static
+</span></span><span style=display:flex><span>connection.id:                          wired-static
+</span></span><span style=display:flex><span>connection.uuid:                        7cfee609-e3a0-4853-b69e-a2a9d3b20fee
+</span></span><span style=display:flex><span>connection.stable-id:                   --
+</span></span><span style=display:flex><span>connection.type:                        802-3-ethernet
+</span></span><span style=display:flex><span>connection.interface-name:              --
+</span></span><span style=display:flex><span>connection.autoconnect:                 yes
+</span></span><span style=display:flex><span>connection.autoconnect-priority:        <span style=color:#a5d6ff>0</span>
+</span></span><span style=display:flex><span>connection.autoconnect-retries:         -1 <span style=color:#ff7b72;font-weight:700>(</span>default<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>中略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>ipv4.method:                            manual
+</span></span><span style=display:flex><span>ipv4.dns:                               8.8.8.8,192.168.2.1
+</span></span><span style=display:flex><span>ipv4.dns-search:                        --
+</span></span><span style=display:flex><span>ipv4.dns-options:                       --
+</span></span><span style=display:flex><span>ipv4.dns-priority:                      <span style=color:#a5d6ff>0</span>
+</span></span><span style=display:flex><span>ipv4.addresses:                         192.168.2.15/24
+</span></span><span style=display:flex><span>ipv4.gateway:                           192.168.2.1
+</span></span><span style=display:flex><span>ipv4.routes:                            --
+</span></span><span style=display:flex><span>ipv4.route-metric:                      -1
+</span></span><span style=display:flex><span>ipv4.route-table:                       <span style=color:#a5d6ff>0</span> <span style=color:#ff7b72;font-weight:700>(</span>unspec<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>ipv4.routing-rules:                     --
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>...<span style=color:#ff7b72;font-weight:700>(</span>後略<span style=color:#ff7b72;font-weight:700>)</span>...
+</span></span></code></pre></div><p>明示的に設定した部分についてはちゃんと反映されてそうではあるが、
+すでに通信できている既存の DHCP 接続（ <code>Wired connection 1</code> ）の設定と比較する形でも見てみる。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ <span style=color:#79c0ff>PAGER</span><span style=color:#ff7b72;font-weight:700>=</span>cat diff -U0 &lt;<span style=color:#ff7b72;font-weight:700>(</span> nmcli connection show <span style=color:#a5d6ff>&#34;Wired connection 1&#34;</span> <span style=color:#ff7b72;font-weight:700>)</span> &lt;<span style=color:#ff7b72;font-weight:700>(</span> nmcli connection show wired-static <span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>--- /dev/fd/63	2023-02-04 09:23:23.013572608 +0900
+</span></span><span style=display:flex><span>+++ /dev/fd/62	2023-02-04 09:23:23.013572608 +0900
+</span></span><span style=display:flex><span>@@ -1,2 +1,2 @@
+</span></span><span style=display:flex><span>-connection.id:                          Wired connection <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-connection.uuid:                        255ba1f6-55f2-322e-8fa0-701bcf4cecc3
+</span></span><span style=display:flex><span>+connection.id:                          wired-static
+</span></span><span style=display:flex><span>+connection.uuid:                        7cfee609-e3a0-4853-b69e-a2a9d3b20fee
+</span></span><span style=display:flex><span>@@ -5 +5 @@
+</span></span><span style=display:flex><span>-connection.interface-name:              eno1
+</span></span><span style=display:flex><span>+connection.interface-name:              --
+</span></span><span style=display:flex><span>@@ -7 +7 @@
+</span></span><span style=display:flex><span>-connection.autoconnect-priority:        -999
+</span></span><span style=display:flex><span>+connection.autoconnect-priority:        <span style=color:#a5d6ff>0</span>
+</span></span><span style=display:flex><span>@@ -11 +11 @@
+</span></span><span style=display:flex><span>-connection.timestamp:                   <span style=color:#a5d6ff>1675469256</span>
+</span></span><span style=display:flex><span>+connection.timestamp:                   <span style=color:#a5d6ff>0</span>
+</span></span><span style=display:flex><span>@@ -43,2 +43,2 @@
+</span></span><span style=display:flex><span>-ipv4.method:                            auto
+</span></span><span style=display:flex><span>-ipv4.dns:                               --
+</span></span><span style=display:flex><span>+ipv4.method:                            manual
+</span></span><span style=display:flex><span>+ipv4.dns:                               8.8.8.8,192.168.2.1
+</span></span><span style=display:flex><span>@@ -48,2 +48,2 @@
+</span></span><span style=display:flex><span>-ipv4.addresses:                         --
+</span></span><span style=display:flex><span>-ipv4.gateway:                           --
+</span></span><span style=display:flex><span>+ipv4.addresses:                         192.168.2.15/24
+</span></span><span style=display:flex><span>+ipv4.gateway:                           192.168.2.1
+</span></span><span style=display:flex><span>@@ -101,52 +100,0 @@
+</span></span><span style=display:flex><span>-GENERAL.NAME:                           Wired connection <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-GENERAL.UUID:                           255ba1f6-55f2-322e-8fa0-701bcf4cecc3
+</span></span><span style=display:flex><span>-GENERAL.DEVICES:                        eno1
+</span></span><span style=display:flex><span>-GENERAL.IP-IFACE:                       eno1
+</span></span><span style=display:flex><span>-GENERAL.STATE:                          activated
+</span></span><span style=display:flex><span>-GENERAL.DEFAULT:                        yes
+</span></span><span style=display:flex><span>-GENERAL.DEFAULT6:                       no
+</span></span><span style=display:flex><span>-GENERAL.SPEC-OBJECT:                    --
+</span></span><span style=display:flex><span>-GENERAL.VPN:                            no
+</span></span><span style=display:flex><span>-GENERAL.DBUS-PATH:                      /org/freedesktop/NetworkManager/ActiveConnection/1
+</span></span><span style=display:flex><span>-GENERAL.CON-PATH:                       /org/freedesktop/NetworkManager/Settings/1
+</span></span><span style=display:flex><span>-GENERAL.ZONE:                           --
+</span></span><span style=display:flex><span>-GENERAL.MASTER-PATH:                    --
+</span></span><span style=display:flex><span>-IP4.ADDRESS<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                         192.168.2.206/24
+</span></span><span style=display:flex><span>-IP4.GATEWAY:                            192.168.2.1
+</span></span><span style=display:flex><span>-IP4.ROUTE<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                           <span style=color:#79c0ff>dst</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.0/24, <span style=color:#79c0ff>nh</span> <span style=color:#ff7b72;font-weight:700>=</span> 0.0.0.0, <span style=color:#79c0ff>mt</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>100</span>
+</span></span><span style=display:flex><span>-IP4.ROUTE<span style=color:#ff7b72;font-weight:700>[</span>2<span style=color:#ff7b72;font-weight:700>]</span>:                           <span style=color:#79c0ff>dst</span> <span style=color:#ff7b72;font-weight:700>=</span> 0.0.0.0/0, <span style=color:#79c0ff>nh</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.1, <span style=color:#79c0ff>mt</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>100</span>
+</span></span><span style=display:flex><span>-IP4.DNS<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                             8.8.8.8
+</span></span><span style=display:flex><span>-IP4.DNS<span style=color:#ff7b72;font-weight:700>[</span>2<span style=color:#ff7b72;font-weight:700>]</span>:                             192.168.2.1
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>broadcast_address</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.255
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>2<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>dhcp_client_identifier</span> <span style=color:#ff7b72;font-weight:700>=</span> 01:1c:69:7a:0c:f9:89
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>3<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>dhcp_lease_time</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>86400</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>4<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>dhcp_server_identifier</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.1
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>5<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>domain_name_servers</span> <span style=color:#ff7b72;font-weight:700>=</span> 8.8.8.8 192.168.2.1
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>6<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>expiry</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1675555656</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>7<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>host_name</span> <span style=color:#ff7b72;font-weight:700>=</span> nuc
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>8<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>ip_address</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.206
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>9<span style=color:#ff7b72;font-weight:700>]</span>:                        <span style=color:#79c0ff>next_server</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.1
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>10<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_broadcast_address</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>11<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_domain_name</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>12<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_domain_name_servers</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>13<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_domain_search</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>14<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_host_name</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>15<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_interface_mtu</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>16<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_ms_classless_static_routes</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>17<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_nis_domain</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>18<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_nis_servers</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>19<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_ntp_servers</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>20<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_rfc3442_classless_static_routes</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>21<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_root_path</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>22<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_routers</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>23<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_static_routes</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>24<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_subnet_mask</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>25<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_time_offset</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>26<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>requested_wpad</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1</span>
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>27<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>routers</span> <span style=color:#ff7b72;font-weight:700>=</span> 192.168.2.1
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>28<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>subnet_mask</span> <span style=color:#ff7b72;font-weight:700>=</span> 255.255.255.0
+</span></span><span style=display:flex><span>-DHCP4.OPTION<span style=color:#ff7b72;font-weight:700>[</span>29<span style=color:#ff7b72;font-weight:700>]</span>:                       <span style=color:#79c0ff>wpad</span> <span style=color:#ff7b72;font-weight:700>=</span> 
+</span></span><span style=display:flex><span>-
+</span></span><span style=display:flex><span>-IP6.ADDRESS<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                         fe80::4b2:8103:9857:8c55/64
+</span></span><span style=display:flex><span>-IP6.GATEWAY:                            --
+</span></span><span style=display:flex><span>-IP6.ROUTE<span style=color:#ff7b72;font-weight:700>[</span>1<span style=color:#ff7b72;font-weight:700>]</span>:                           <span style=color:#79c0ff>dst</span> <span style=color:#ff7b72;font-weight:700>=</span> fe80::/64, <span style=color:#79c0ff>nh</span> <span style=color:#ff7b72;font-weight:700>=</span> ::, <span style=color:#79c0ff>mt</span> <span style=color:#ff7b72;font-weight:700>=</span> <span style=color:#a5d6ff>1024</span>
+</span></span></code></pre></div><p>差分としては、</p><ul><li><code>connection.*</code> 辺りの値は NetworkManger での管理上の値っぽいので問題無し</li><li><code>ipv4.*</code> 辺りは今回明示的に設定した部分なので問題無し</li><li><code>GENERAL.*</code> 辺りは <code>connection.*</code> と似たようなモノっぽいので問題無し</li><li><code>IPV4.*</code> <code>DHCP.*</code> <code>IP6.*</code> 辺りは DHCP で取得したものっぽいので多分問題無し</li></ul><p>ということで大丈夫そう。</p><p>眺めた感じ小文字部分が connection の設定値で、
+大文字部分が DHCP 等動的に取得したもの等も含めた最終的な値って感じだろうか。</p><h3 id=connection-の切替>connection の切替</h3><p>最後にネットワーク設定を切り替える。</p><p>切替前の状態を見ておく。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># ネットワークデバイスと設定されている connection</span>
+</span></span><span style=display:flex><span>❯ nmcli device status
+</span></span><span style=display:flex><span>DEVICE           TYPE      STATE         CONNECTION         
+</span></span><span style=display:flex><span>eno1             ethernet  connected     Wired connection <span style=color:#a5d6ff>1</span> 
+</span></span><span style=display:flex><span>wlp58s0          wifi      disconnected  --                 
+</span></span><span style=display:flex><span>p2p-dev-wlp58s0  wifi-p2p  disconnected  --                 
+</span></span><span style=display:flex><span>lo               loopback  unmanaged     --                 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 今のIPアドレス等</span>
+</span></span><span style=display:flex><span>❯ ip address show eno1
+</span></span><span style=display:flex><span>2: eno1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#a5d6ff>1500</span> qdisc fq_codel state UP group default qlen <span style=color:#a5d6ff>1000</span>
+</span></span><span style=display:flex><span>    link/ether 1c:69:7a:0c:f9:89 brd ff:ff:ff:ff:ff:ff
+</span></span><span style=display:flex><span>    altname enp0s31f6
+</span></span><span style=display:flex><span>    inet 192.168.2.206/24 brd 192.168.2.255 scope global dynamic noprefixroute eno1
+</span></span><span style=display:flex><span>       valid_lft 85068sec preferred_lft 85068sec
+</span></span><span style=display:flex><span>    inet6 fe80::4b2:8103:9857:8c55/64 scope link noprefixroute 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span></code></pre></div><p>実際に切り替える</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 今回作成した connection を有線ネットワークデバイス（ eno1 ）に紐付ける</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection modify wired-static ifname eno1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># wired-connection を有効化する（同じネットワークデバイスに紐付いた別の connection が active になっている場合はこのタイミングで自動で inactive になる）</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection up wired-static
+</span></span><span style=display:flex><span>Connection successfully activated <span style=color:#ff7b72;font-weight:700>(</span>D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span></code></pre></div><p>ちゃんと切り替わったか確認</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 有線ネットワークデバイス( eno1 ) に今回作成した connection ( wired-static ) が適用されている</span>
+</span></span><span style=display:flex><span>❯ nmcli device status
+</span></span><span style=display:flex><span>DEVICE           TYPE      STATE         CONNECTION   
+</span></span><span style=display:flex><span>eno1             ethernet  connected     wired-static 
+</span></span><span style=display:flex><span>wlp58s0          wifi      disconnected  --           
+</span></span><span style=display:flex><span>p2p-dev-wlp58s0  wifi-p2p  disconnected  --           
+</span></span><span style=display:flex><span>lo               loopback  unmanaged     --           
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># connection 一覧からも確認</span>
+</span></span><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>wired-static        7cfee609-e3a0-4853-b69e-a2a9d3b20fee  ethernet  eno1   
+</span></span><span style=display:flex><span>Wired connection <span style=color:#a5d6ff>1</span>  255ba1f6-55f2-322e-8fa0-701bcf4cecc3  ethernet  --     
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># IP アドレスも想定通りになっている</span>
+</span></span><span style=display:flex><span>❯ ip address show eno1
+</span></span><span style=display:flex><span>2: eno1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#a5d6ff>1500</span> qdisc fq_codel state UP group default qlen <span style=color:#a5d6ff>1000</span>
+</span></span><span style=display:flex><span>    link/ether 1c:69:7a:0c:f9:89 brd ff:ff:ff:ff:ff:ff
+</span></span><span style=display:flex><span>    altname enp0s31f6
+</span></span><span style=display:flex><span>    inet 192.168.2.15/24 brd 192.168.2.255 scope global noprefixroute eno1
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 fe80::339e:3e8f:5bc9:ff5/64 scope link noprefixroute 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># インターネット上の適当なところへ疎通確認</span>
+</span></span><span style=display:flex><span>❯ ping google.com
+</span></span><span style=display:flex><span>PING google.com <span style=color:#ff7b72;font-weight:700>(</span>172.217.26.238<span style=color:#ff7b72;font-weight:700>)</span> 56<span style=color:#ff7b72;font-weight:700>(</span>84<span style=color:#ff7b72;font-weight:700>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from nrt12s51-in-f14.1e100.net <span style=color:#ff7b72;font-weight:700>(</span>172.217.26.238<span style=color:#ff7b72;font-weight:700>)</span>: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>1</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>116</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>2.89 ms
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from nrt12s51-in-f14.1e100.net <span style=color:#ff7b72;font-weight:700>(</span>172.217.26.238<span style=color:#ff7b72;font-weight:700>)</span>: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>2</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>116</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>3.14 ms
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>64</span> bytes from nrt12s51-in-f14.1e100.net <span style=color:#ff7b72;font-weight:700>(</span>172.217.26.238<span style=color:#ff7b72;font-weight:700>)</span>: <span style=color:#79c0ff>icmp_seq</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>3</span> <span style=color:#79c0ff>ttl</span><span style=color:#ff7b72;font-weight:700>=</span><span style=color:#a5d6ff>116</span> <span style=color:#79c0ff>time</span><span style=color:#ff7b72;font-weight:700>=</span>3.29 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- google.com ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#a5d6ff>3</span> packets transmitted, <span style=color:#a5d6ff>3</span> received, 0% packet loss, time 2003ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#ff7b72;font-weight:700>=</span> 2.889/3.105/3.288/0.164 ms
+</span></span></code></pre></div><p>ということで設定完了。</p><h2 id=コマンドまとめ>コマンドまとめ</h2><p>補足や出力結果で間延びした感があるので、改めて設定コマンドのみを抜粋</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>nmcli device status
+</span></span><span style=display:flex><span>nmcli connection show
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>sudo nmcli connection add con-name wired-static type ethernet
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static ipv4.addresses 192.168.2.15/24
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static ipv4.gateway 192.168.2.1
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static ipv4.dns 8.8.8.8
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static +ipv4.dns 192.168.2.1
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static ipv4.method manual
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>sudo nmcli connection modify wired-static ifname eno1
+</span></span><span style=display:flex><span>sudo nmcli connection up wired-static
+</span></span></code></pre></div><h2 id=余談>余談</h2><h3 id=自動で作成される-connection--wired-connection-1-について>自動で作成される connection （ Wired connection 1 ）について</h3><p>作業時点で既に作成されていた <code>Wired connection 1</code> （日本語ロケールだと <code>有線接続1</code> ）という connection だが、
+今回の <code>wired-static</code> を作成した後でシステムを再起動すると消えていた。
+（ NetworkManager.service の再起動では残っていた）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>wired-static        7cfee609-e3a0-4853-b69e-a2a9d3b20fee  ethernet  eno1   
+</span></span></code></pre></div><p>で、試しに作った connection を削除して NetworkManager を再起動してみるとまた現れた。</p><p>こんな感じ。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#8b949e;font-style:italic># connection を削除</span>
+</span></span><span style=display:flex><span>❯ sudo nmcli connection delete wired-static
+</span></span><span style=display:flex><span>Connection <span style=color:#a5d6ff>&#39;wired-static&#39;</span> <span style=color:#ff7b72;font-weight:700>(</span>7cfee609-e3a0-4853-b69e-a2a9d3b20fee<span style=color:#ff7b72;font-weight:700>)</span> successfully deleted.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># connection が一つも無いのを確認</span>
+</span></span><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># device の方でも確認</span>
+</span></span><span style=display:flex><span>❯ nmcli device status
+</span></span><span style=display:flex><span>DEVICE           TYPE      STATE         CONNECTION 
+</span></span><span style=display:flex><span>eno1             ethernet  disconnected  --         
+</span></span><span style=display:flex><span>wlp58s0          wifi      disconnected  --         
+</span></span><span style=display:flex><span>p2p-dev-wlp58s0  wifi-p2p  disconnected  --         
+</span></span><span style=display:flex><span>lo               loopback  unmanaged     --         
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># NetworkManager.service を再起動</span>
+</span></span><span style=display:flex><span>❯ sudo systemctl restart NetworkManager.service
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8b949e;font-style:italic># 改めて connection を確認すると勝手にできている</span>
+</span></span><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>Wired connection <span style=color:#a5d6ff>1</span>  255ba1f6-55f2-322e-8fa0-701bcf4cecc3  ethernet  eno1   
+</span></span></code></pre></div><p>また、 <code>nmcli connection add 〜</code> で connection を作成した場合は以下の様に設定ファイルが作られるが、
+自動で設定された <code>Wired connection 1</code> のファイルは作られない。</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ nmcli connection show
+</span></span><span style=display:flex><span>NAME                UUID                                  TYPE      DEVICE 
+</span></span><span style=display:flex><span>wired-static        f7d3fe23-2c70-4025-aa59-38f65a365f8b  ethernet  eno1   
+</span></span><span style=display:flex><span>Wired connection <span style=color:#a5d6ff>1</span>  255ba1f6-55f2-322e-8fa0-701bcf4cecc3  ethernet  --     
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>❯ sudo ls -lh /etc/NetworkManager/system-connections/
+</span></span><span style=display:flex><span>total 4.0K
+</span></span><span style=display:flex><span>-rw------- <span style=color:#a5d6ff>1</span> root root <span style=color:#a5d6ff>252</span> Feb  <span style=color:#a5d6ff>4</span> 11:38 wired-static.nmconnection
+</span></span></code></pre></div><p>この辺りを考えると自動で設定を作成しているというよりは、一時的な設定を行っているという理解が正しそう。</p><p>GUI で設定してた時は特に意識せずこの <code>Wired connection 1</code> を直接弄ったりしていたが、
+設定を弄るなら別で connection を作って設定した方が良いのかもしれない。
+（これまで GUI で弄っていて突然設定が飛んだみたいな記憶は無いので、 connection ひとつで使っている分には実際に困ることは無いのかもだが気分的に）</p><p>この辺りはもう少しドキュメント追うなり試すなりしても良いかもしれない。</p><h3 id=自動接続設定について>自動接続設定について</h3><p>今回の作業の中では特に必要なかったので省略したが、
+自動接続するかどうかや、自動接続する connection が複数ある場合にどの connection を優先して使うかはこの辺りのパラメータで制御できるっぽい。
+（明示的に設定しなかった場合は以下の値になる）</p><div class=highlight><pre tabindex=0 style=color:#c9d1d9;background-color:#0d1117;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>❯ nmcli connection show wired-static | grep autoconnect
+</span></span><span style=display:flex><span>connection.autoconnect:                 yes
+</span></span><span style=display:flex><span>connection.autoconnect-priority:        <span style=color:#a5d6ff>0</span>
+</span></span><span style=display:flex><span>connection.autoconnect-retries:         -1 <span style=color:#ff7b72;font-weight:700>(</span>default<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span><span style=display:flex><span>connection.autoconnect-slaves:          -1 <span style=color:#ff7b72;font-weight:700>(</span>default<span style=color:#ff7b72;font-weight:700>)</span>
+</span></span></code></pre></div><p>ノートPC の Wi-Fi の設定は NetworkManager の GUI で設定したが、
+どの SSID に優先して繋ぐとかも細かく設定できそうなので眺めてみても良さそう。
+（特に意識せず設定した場合にどうなるかというのを見る意味も含めて）</p><h2 id=おわりに>おわりに</h2><p>やったこと自体は「固定 IP アドレスを設定した」だけなので大したことはやってないのだが意外と学びはあった。
+（具体的に今後何かの役に立つかは微妙だが）</p><div class=footnotes role=doc-endnotes><hr><ol><li id=fn:1><p>IOS とかのコマンドが似たような操作だが Linux のコマンドだとあんまりこのスタイル見ない気がする。&#160;<a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li><li id=fn:2><p>今回記事の中で設定したマシンとは別のマシン（普段デスクトップとして使っているヤツ）では sudo 無しで connection の作成などができていた。そちらではデスクトップ環境として Xfce をインストールしているのでその辺りの関係な気はするが。&#160;<a href=#fnref:2 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li></ol></div></section></article></main><aside class=article_aside_container><div class="article_meta_container card"><dl class=article_meta_list><div class="article_meta_item title"><dt class=article_meta_key><span>Title</span></dt><dd class=article_meta_value>nmcli を使って固定 IP アドレスの設定を行う</dd></div><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_calendar"><span>Published</span></dt><dd class=article_meta_value><time class=published_date itemprop=datePublished datetime=2023-02-04T14:03:27+09:00>2023-02-04</time></dd></div><div class="article_meta_item timestamp"><dt class="article_meta_key has_icon icon_reload"><span>Modified</span></dt><dd class=article_meta_value><time class=modified_date itemprop=dateModified datetime=2023-02-16T16:07:20+09:00>2023-02-16</time></dd></div><div class="article_meta_item taxonomy"><dt class="article_meta_key has_icon icon_tag"><span>Tags</span></dt><dd class=article_meta_value><ul class=taxonomy_list><li class=taxonomy_list_item><a class=taxonomy_button href=https://blog.shida-ws.net/tags/linux/>Linux</a></li></ul></dd></div></dl></div><div class="article_toc_container card"><div class=article_toc><div class=toc_header>Table of contents</div><div class=toc_body><nav id=TableOfContents><ul><li><a href=#nmcli-について>nmcli について</a></li><li><a href=#networkmanager-における-connection-の概念>NetworkManager における connection の概念</a></li><li><a href=#設定作業>設定作業</a><ul><li><a href=#既存設定の確認>既存設定の確認</a></li><li><a href=#新規-connection-の作成>新規 connection の作成</a></li><li><a href=#ipv4-関連の設定>IPv4 関連の設定</a></li><li><a href=#作成した-connection-の設定確認>作成した connection の設定確認</a></li><li><a href=#connection-の切替>connection の切替</a></li></ul></li><li><a href=#コマンドまとめ>コマンドまとめ</a></li><li><a href=#余談>余談</a><ul><li><a href=#自動で作成される-connection--wired-connection-1-について>自動で作成される connection （ Wired connection 1 ）について</a></li><li><a href=#自動接続設定について>自動接続設定について</a></li></ul></li><li><a href=#おわりに>おわりに</a></li></ul></nav></div></div></div></aside></div></div></div><footer class=site_footer_container><div class="footer_container content_area"><div class=footer_body>© 2022 shida.
+Generated with <a href=https://gohugo.io/ rel="nofollow noopener" target=_blank>Hugo</a> and
+<a href=https://github.com/goshida/hugo-theme/ rel="nofollow noopener" target=_blank>goshida/hugo-theme</a>.</div></div></footer></div></body></html>

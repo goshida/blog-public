@@ -1,0 +1,56 @@
+==================================================================
+https://keybase.io/goshida
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://blog.shida-ws.net
+  * I am goshida (https://keybase.io/goshida) on keybase.
+  * I have a public key ASC-AtTjvDKsFzOHgmJh6wdXJTMRZRTmVPXowyGIWbMj3wo
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "0120be02d4e3bc32ac173387826261eb07572533116514e654f5e8c3218859b323df0a",
+      "host": "keybase.io",
+      "kid": "0120be02d4e3bc32ac173387826261eb07572533116514e654f5e8c3218859b323df0a",
+      "uid": "72ac2563509bff62b54061bf3888f319",
+      "username": "goshida"
+    },
+    "merkle_root": {
+      "ctime": 1684426840,
+      "hash": "dca2d6c912202b06fe786b593911925529aeac10bee991f0b11261ff34a3eed53e5ef84d768dcef38bebebdcdd46763ea77ee0175416abf5cbafc168aae42a6c",
+      "hash_meta": "d5dc680a49e6b1abee1e96ffe050aa6a73b7cbaa2a5a5b623dbbfc1a77dd4dee",
+      "seqno": 24467777
+    },
+    "service": {
+      "entropy": "NnVvb4PxVzmML74mhSmVNxmb",
+      "hostname": "blog.shida-ws.net",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 2
+  },
+  "client": {
+    "name": "keybase.io go client",
+    "version": "6.0.2"
+  },
+  "ctime": 1684426847,
+  "expire_in": 504576000,
+  "prev": "798c65bf8a0ebb33af44409cf8773a1f2d3cfd5f70d74e75cb57a30f43404524",
+  "seqno": 15,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+hKRib2R5hqhkZXRhY2hlZMOpaGFzaF90eXBlCqNrZXnEIwEgvgLU47wyrBczh4JiYesHVyUzEWUU5lT16MMhiFmzI98Kp3BheWxvYWTESpcCD8QgeYxlv4oOuzOvRECc+Hc6Hy08/V9w1051y1ejD0NARSTEIKj65T3eQ/She1mhDXiBO8jRL6c7/AfrCMs6Ejm5kRSnAgHCo3NpZ8RAT8QnvOxqZ8aw8GBNlf8x0IyPMN93EOFrfLbb/nuYXUXLRARch7+2SbdaAUFQL1/rujAury/FLm2+08Xo5fkwAqhzaWdfdHlwZSCkaGFzaIKkdHlwZQildmFsdWXEIHat2Y4qptg544ucdPwVCqWk7XFK547foumZ6Jc/8QUUo3RhZ80CAqd2ZXJzaW9uAQ==
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/goshida
+
+==================================================================
